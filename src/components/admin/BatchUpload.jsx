@@ -305,93 +305,121 @@ const BatchUpload = ({ onSuccess }) => {
               ${item.status === 'error' ? 'border-red-500/40' : ''}
               ${item.status === 'idle' || item.status === 'uploading' ? 'border-gray-700' : ''}`}
           >
-            <div className='flex gap-4 p-4'>
-              {/* Preview de la imagen comprimida */}
-              <div className='relative shrink-0'>
-                <div
-                  className='w-24 rounded-xl overflow-hidden bg-gray-700'
-                  style={{ aspectRatio: '4/5' }}
-                >
-                  <img
-                    src={item.previewUrl}
-                    alt='Preview'
-                    className='w-full h-full object-cover'
-                  />
+            <div className='flex flex-col sm:flex-row gap-3.5 sm:gap-4 p-3.5 sm:p-4'>
+              {/* Preview de la imagen comprimida y delete en movil */}
+              <div className='flex items-start justify-between sm:block shrink-0'>
+                <div className='relative'>
+                  <div
+                    className='w-20 sm:w-24 rounded-xl overflow-hidden bg-gray-700 shadow-md border border-gray-700/60'
+                    style={{ aspectRatio: '4/5' }}
+                  >
+                    <img
+                      src={item.previewUrl}
+                      alt='Preview'
+                      className='w-full h-full object-cover'
+                    />
+                  </div>
+                  {/* Badge de compresion */}
+                  <div className='absolute -bottom-1 -right-1 bg-gray-950/90 border border-gray-700 rounded-md px-1.5 py-0.5 text-[10px] text-green-400 font-mono'>
+                    {item.compressedSizeKB}KB
+                  </div>
                 </div>
-                {/* Badge de compresion */}
-                <div className='absolute -bottom-1 -right-1 bg-gray-900 border border-gray-700 rounded-md px-1.5 py-0.5 text-xs text-green-400 font-mono'>
-                  {item.compressedSizeKB}KB
-                </div>
+
+                {/* Boton eliminar visible en móvil */}
+                {item.status === 'idle' && (
+                  <button
+                    onClick={() => removeItem(item.id)}
+                    className='text-gray-500 hover:text-red-400 p-1.5 sm:hidden transition-colors rounded-lg bg-gray-750/30'
+                    title='Eliminar de la lista'
+                  >
+                    <X size={18} />
+                  </button>
+                )}
               </div>
 
               {/* Formulario del producto */}
               <div className='flex-1 min-w-0 space-y-3'>
                 {item.status === 'done' ? (
                   // Estado: guardado
-                  <div className='flex items-center gap-2 py-4'>
-                    <CheckCircle size={20} className='text-green-400' />
+                  <div className='flex items-center gap-2 py-3'>
+                    <CheckCircle size={20} className='text-green-400 shrink-0' />
                     <div>
-                      <p className='text-gray-100 font-medium'>{item.name}</p>
+                      <p className='text-gray-100 font-medium text-sm'>{item.name}</p>
                       <p className='text-gray-500 text-xs'>Publicado en la tienda ✓</p>
                     </div>
                   </div>
                 ) : item.status === 'error' ? (
                   // Estado: error
-                  <div className='flex items-center gap-2 py-4'>
-                    <AlertCircle size={20} className='text-red-400' />
+                  <div className='flex items-center gap-2 py-3'>
+                    <AlertCircle size={20} className='text-red-400 shrink-0' />
                     <div>
-                      <p className='text-gray-100 font-medium'>{item.name}</p>
+                      <p className='text-gray-100 font-medium text-sm'>{item.name}</p>
                       <p className='text-red-400 text-xs'>{item.error}</p>
                     </div>
                   </div>
                 ) : item.status === 'uploading' ? (
                   // Estado: subiendo
-                  <div className='flex items-center gap-2 py-4'>
-                    <Loader2 size={20} className='text-brand-400 animate-spin' />
+                  <div className='flex items-center gap-2 py-3'>
+                    <Loader2 size={20} className='text-brand-400 animate-spin shrink-0' />
                     <p className='text-gray-300 text-sm'>Publicando {item.name}...</p>
                   </div>
                 ) : (
                   // Estado: formulario editable
                   <>
                     {/* Nombre */}
-                    <input
-                      type='text'
-                      value={item.name}
-                      onChange={(e) => updateItem(item.id, 'name', e.target.value)}
-                      placeholder='Nombre del producto'
-                      className='form-input text-sm py-2'
-                    />
-
-                    <div className='flex gap-3'>
-                      {/* Precio */}
+                    <div>
+                      <label className='text-gray-400 text-xs font-semibold uppercase tracking-wider block mb-1'>
+                        Nombre de la prenda
+                      </label>
                       <input
-                        type='number'
-                        value={item.price}
-                        onChange={(e) => updateItem(item.id, 'price', e.target.value)}
-                        placeholder='Precio'
-                        min='0'
-                        step='100'
-                        className='form-input text-sm py-2 w-32'
+                        type='text'
+                        value={item.name}
+                        onChange={(e) => updateItem(item.id, 'name', e.target.value)}
+                        placeholder='Ej: Vestido Estampado Seda'
+                        className='form-input text-sm py-2 sm:py-2.5'
                       />
+                    </div>
+
+                    <div className='grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3'>
+                      {/* Precio */}
+                      <div>
+                        <label className='text-gray-400 text-xs font-semibold uppercase tracking-wider block mb-1'>
+                          Precio (COP)
+                        </label>
+                        <input
+                          type='number'
+                          value={item.price}
+                          onChange={(e) => updateItem(item.id, 'price', e.target.value)}
+                          placeholder='Ej: 85000'
+                          min='0'
+                          step='100'
+                          className='form-input text-sm py-2 sm:py-2.5'
+                        />
+                      </div>
 
                       {/* Categoria */}
-                      <select
-                        value={item.categoryId}
-                        onChange={(e) => updateItem(item.id, 'categoryId', e.target.value)}
-                        className='form-input text-sm py-2 flex-1 bg-gray-800'
-                      >
-                        <option value=''>Sin categoría</option>
-                        {categories.map((cat) => (
-                          <option key={cat.id} value={cat.id}>
-                            {cat.name}
-                          </option>
-                        ))}
-                      </select>
+                      <div>
+                        <label className='text-gray-400 text-xs font-semibold uppercase tracking-wider block mb-1'>
+                          Categoría
+                        </label>
+                        <select
+                          value={item.categoryId}
+                          onChange={(e) => updateItem(item.id, 'categoryId', e.target.value)}
+                          className='form-input text-sm py-2 sm:py-2.5 bg-gray-800'
+                        >
+                          <option value=''>Sin categoría</option>
+                          {categories.map((cat) => (
+                            <option key={cat.id} value={cat.id}>
+                              {cat.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
 
                     {/* Tallas */}
                     <div>
-                      <p className='text-gray-500 text-xs mb-1.5 uppercase tracking-wide'>
+                      <p className='text-gray-400 text-xs font-semibold uppercase tracking-wider mb-1.5'>
                         Tallas disponibles *
                       </p>
                       <div className='flex flex-wrap gap-1.5'>
@@ -400,7 +428,7 @@ const BatchUpload = ({ onSuccess }) => {
                             key={size}
                             type='button'
                             onClick={() => toggleSize(item.id, size)}
-                            className={`size-chip ${
+                            className={`size-chip !py-1 !px-2.5 ${
                               item.sizes.includes(size)
                                 ? 'size-chip-active'
                                 : 'size-chip-inactive'
@@ -411,8 +439,8 @@ const BatchUpload = ({ onSuccess }) => {
                         ))}
                       </div>
                       {item.sizes.length === 0 && (
-                        <p className='text-red-400/70 text-xs mt-1'>
-                          * Selecciona al menos una talla
+                        <p className='text-red-400/80 text-xs mt-1'>
+                          * Selecciona al menos una talla para publicar
                         </p>
                       )}
                     </div>
@@ -420,11 +448,12 @@ const BatchUpload = ({ onSuccess }) => {
                 )}
               </div>
 
-              {/* Boton eliminar */}
+              {/* Boton eliminar en desktop */}
               {item.status === 'idle' && (
                 <button
                   onClick={() => removeItem(item.id)}
-                  className='text-gray-600 hover:text-red-400 transition-colors self-start p-1 shrink-0'
+                  className='text-gray-500 hover:text-red-400 transition-colors self-start p-1.5 shrink-0 hidden sm:block rounded-lg hover:bg-gray-700/50'
+                  title='Eliminar de la lista'
                 >
                   <X size={18} />
                 </button>

@@ -104,17 +104,48 @@ const CatalogPage = () => {
         totalVisible={filteredProducts.length}
       />
 
+      {/* Floating cart button en movil cuando hay productos */}
+      {totalItems > 0 && (
+        <aside aria-label='Acceso rápido al carrito' className='fixed bottom-6 right-5 z-30 md:hidden animate-scale-in'>
+          <button
+            onClick={() => setIsOpen(true)}
+            id='floating-cart-btn'
+            className='flex items-center gap-2.5 bg-gradient-to-r from-brand-600 to-purple-600 text-white font-bold px-4 py-3.5 rounded-full shadow-2xl shadow-brand-500/50 border border-brand-400/30 active:scale-95 transition-transform'
+          >
+            <div className='relative'>
+              <ShoppingBag size={20} />
+              <span className='absolute -top-2 -right-2 bg-pink-400 text-gray-950 text-[10px] font-black w-4 h-4 rounded-full flex items-center justify-center'>
+                {totalItems}
+              </span>
+            </div>
+            <span className='text-xs font-semibold'>Ver Carrito</span>
+          </button>
+        </aside>
+      )}
+
       {/* Grid de productos */}
-      <main className='page-container py-8'>
+      <main className='page-container py-6 sm:py-8'>
         <ProductGrid products={filteredProducts} loading={loading} />
       </main>
 
-      {/* Footer */}
-      <footer className='border-t border-gray-800 py-8 mt-8'>
-        <div className='page-container text-center'>
-          <p className='text-gray-600 text-sm'>
-            {storeName} · Hecho con ❤️ ·{' '}
-            <span className='text-brand-500'>Pedidos por WhatsApp</span>
+      {/* Footer elegante */}
+      <footer className='border-t border-gray-800/80 bg-gray-950 py-10 mt-12 text-center'>
+        <div className='page-container space-y-4'>
+          <h3 className='font-display text-lg font-bold text-gray-200 tracking-wide'>
+            {storeName}
+          </h3>
+          <p className='text-gray-500 text-xs sm:text-sm max-w-sm mx-auto'>
+            Catálogo digital de moda y tendencias. Pedidos y atención exclusiva y personalizada vía WhatsApp.
+          </p>
+          <div className='flex items-center justify-center gap-2 text-xs text-brand-400/80 font-medium pt-2'>
+            <span>✨ Calidad Garantizada</span>
+            <span>•</span>
+            <span>🚀 Envíos Seguros</span>
+            <span>•</span>
+            <span>💬 Respuesta Inmediata</span>
+          </div>
+          <p className='text-gray-700 text-xs pt-4'>
+            © {new Date().getFullYear()} {storeName}. Todos los derechos reservados.
           </p>
         </div>
       </footer>

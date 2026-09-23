@@ -163,38 +163,40 @@ const ProductList = ({ refreshKey }) => {
             {/* Acciones */}
             {deleteConfirm === product.id ? (
               // Confirmacion de borrado
-              <div className='flex items-center gap-2 shrink-0'>
-                <span className='text-red-400 text-xs hidden sm:block'>¿Eliminar?</span>
+              <div className='flex items-center gap-1.5 shrink-0 bg-red-950/30 p-1 rounded-xl border border-red-500/30'>
+                <span className='text-red-400 text-xs hidden sm:inline px-1 font-medium'>¿Eliminar?</span>
                 <button
                   onClick={() => deleteProduct(product)}
-                  className='p-2 bg-red-500/20 hover:bg-red-500/40 border border-red-500/40 rounded-lg transition-colors'
+                  className='p-2 bg-red-600 hover:bg-red-500 text-white rounded-lg transition-colors active:scale-95'
                   title='Confirmar eliminación'
                 >
-                  <Check size={14} className='text-red-400' />
+                  <Check size={15} />
                 </button>
                 <button
                   onClick={() => setDeleteConfirm(null)}
-                  className='p-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors'
+                  className='p-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition-colors active:scale-95'
                   title='Cancelar'
                 >
-                  <X size={14} className='text-gray-400' />
+                  <X size={15} />
                 </button>
               </div>
             ) : (
-              <div className='flex items-center gap-1.5 shrink-0'>
+              <div className='flex items-center gap-1 sm:gap-1.5 shrink-0'>
                 {updating === product.id ? (
-                  <Loader2 size={16} className='text-brand-400 animate-spin' />
+                  <div className='p-2 flex items-center justify-center'>
+                    <Loader2 size={18} className='text-brand-400 animate-spin' />
+                  </div>
                 ) : (
                   <>
                     {/* Ciclar stock */}
                     <button
                       onClick={() => cycleStock(product)}
-                      title={`Stock: ${STOCK_LABELS[product.stock_status]} → Click para cambiar`}
-                      className='p-2 hover:bg-gray-700 rounded-lg transition-colors'
+                      title={`Stock actual: ${STOCK_LABELS[product.stock_status]} (Toca para cambiar)`}
+                      className='p-2.5 sm:p-2 bg-gray-800/80 hover:bg-gray-700 rounded-xl transition-all active:scale-90 border border-gray-700/60'
                       id={`stock-toggle-${product.id}`}
                     >
                       <Circle
-                        size={14}
+                        size={15}
                         className={STOCK_COLORS[product.stock_status]}
                         fill='currentColor'
                       />
@@ -203,13 +205,13 @@ const ProductList = ({ refreshKey }) => {
                     {/* Toggle visibilidad */}
                     <button
                       onClick={() => toggleVisibility(product)}
-                      title={product.is_visible ? 'Ocultar del catálogo' : 'Mostrar en catálogo'}
-                      className='p-2 hover:bg-gray-700 rounded-lg transition-colors'
+                      title={product.is_visible ? 'Visible en catálogo (Click para ocultar)' : 'Oculto (Click para mostrar)'}
+                      className='p-2.5 sm:p-2 bg-gray-800/80 hover:bg-gray-700 rounded-xl transition-all active:scale-90 border border-gray-700/60'
                       id={`visibility-toggle-${product.id}`}
                     >
                       {product.is_visible
-                        ? <Eye size={14} className='text-gray-400' />
-                        : <EyeOff size={14} className='text-gray-600' />
+                        ? <Eye size={15} className='text-gray-300' />
+                        : <EyeOff size={15} className='text-gray-500' />
                       }
                     </button>
 
@@ -217,10 +219,10 @@ const ProductList = ({ refreshKey }) => {
                     <button
                       onClick={() => setDeleteConfirm(product.id)}
                       title='Eliminar producto'
-                      className='p-2 hover:bg-gray-700 rounded-lg transition-colors'
+                      className='p-2.5 sm:p-2 bg-gray-800/80 hover:bg-red-500/20 hover:border-red-500/30 rounded-xl transition-all active:scale-90 border border-gray-700/60'
                       id={`delete-product-${product.id}`}
                     >
-                      <Trash2 size={14} className='text-gray-600 hover:text-red-400' />
+                      <Trash2 size={15} className='text-gray-400 hover:text-red-400' />
                     </button>
                   </>
                 )}
