@@ -2,9 +2,14 @@ import { useState, useEffect } from 'react'
 import { auth } from '../lib/firebaseClient'
 import {
   signInWithEmailAndPassword,
+  signInWithPopup,
+  GoogleAuthProvider,
   signOut as firebaseSignOut,
   onAuthStateChanged,
 } from 'firebase/auth'
+
+const googleProvider = new GoogleAuthProvider()
+googleProvider.setCustomParameters({ prompt: 'select_account' })
 
 const useAuth = () => {
   const [user, setUser] = useState(null)
@@ -40,6 +45,22 @@ const useAuth = () => {
     }
   }
 
+  const signInWithGoogle = async () => {
+    if (!auth) {
+      return {
+        user: null,
+        error: { message: 'Firebase Auth no está inicializado. Revisa tus variables en .env' },
+      }
+    }
+
+    try {
+      const result = await signInWithPopup(auth, googleProvider)
+      return { user: result.user, error: null }
+    } catch (error) {
+      return { user: null, error }
+    }
+  }
+
   const signOut = async () => {
     if (!auth) {
       setUser(null)
@@ -55,7 +76,7 @@ const useAuth = () => {
     }
   }
 
-  return { user, loading, signIn, signOut }
+  return { user, loading, signIn, signInWithGoogle, signOut }
 }
 
 export default useAuth

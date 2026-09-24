@@ -20,6 +20,9 @@
     ]
   },
   "auth": {
-    "providers": {}
+    "providers": {
+      "emailPassword": true,
+      "googleSignIn": {}
+    }
   }
 }
