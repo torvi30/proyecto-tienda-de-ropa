@@ -3,7 +3,7 @@ import { Navigate } from 'react-router-dom'
 import { Eye, EyeOff, LogIn, Lock, AlertCircle } from 'lucide-react'
 import useAuth from '../hooks/useAuth'
 import Spinner from '../components/shared/Spinner'
-import { isDemoMode } from '../lib/supabaseClient'
+import { isDemoMode } from '../lib/firebaseClient'
 
 const LoginPage = () => {
   const { user, loading, signIn } = useAuth()
@@ -32,7 +32,16 @@ const LoginPage = () => {
     const { error: authError } = await signIn(email.trim(), password)
 
     if (authError) {
-      setError('Credenciales incorrectas. Verifica tu email y contraseña.')
+      const code = authError.code || ''
+      if (code === 'auth/invalid-credential' || code === 'auth/wrong-password' || code === 'auth/user-not-found') {
+        setError('Credenciales incorrectas. Verifica tu correo y contraseña.')
+      } else if (code === 'auth/invalid-email') {
+        setError('El formato del correo electrónico no es válido.')
+      } else if (code === 'auth/too-many-requests') {
+        setError('Demasiados intentos fallidos. Por favor espera unos minutos.')
+      } else {
+        setError(authError.message || 'Error al iniciar sesión con Firebase.')
+      }
     }
     setSubmitting(false)
   }

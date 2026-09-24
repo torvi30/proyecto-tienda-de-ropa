@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { supabase, isDemoMode } from '../lib/supabaseClient'
+import { db, isDemoMode } from '../lib/firebaseClient'
+import { collection, getDocs, query, orderBy } from 'firebase/firestore'
 import { mockCategories } from '../lib/mockData'
 
 const useCategories = () => {
@@ -8,19 +9,31 @@ const useCategories = () => {
 
   useEffect(() => {
     const fetchCategories = async () => {
-      if (isDemoMode) {
+      if (isDemoMode || !db) {
         setCategories(mockCategories)
         setLoading(false)
         return
       }
 
-      const { data } = await supabase
-        .from('categories')
-        .select('*')
-        .order('sort_order', { ascending: true })
+      try {
+        const q = query(collection(db, 'categories'), orderBy('sort_order', 'asc'))
+        const querySnapshot = await getDocs(q)
+        const items = []
+        querySnapshot.forEach((doc) => {
+          items.push({ id: doc.id, ...doc.data() })
+        })
 
-      setCategories(data || [])
-      setLoading(false)
+        if (items.length === 0) {
+          setCategories(mockCategories)
+        } else {
+          setCategories(items)
+        }
+      } catch (err) {
+        console.error('Error al cargar categorías de Firestore:', err)
+        setCategories(mockCategories)
+      } finally {
+        setLoading(false)
+      }
     }
 
     fetchCategories()

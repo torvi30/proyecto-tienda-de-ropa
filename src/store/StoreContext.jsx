@@ -1,26 +1,39 @@
 import { createContext, useContext, useState, useEffect } from 'react'
-import { supabase, isDemoMode } from '../lib/supabaseClient'
+import { db, isDemoMode } from '../lib/firebaseClient'
+import { doc, getDoc } from 'firebase/firestore'
 import { mockSettings } from '../lib/mockData'
 
 const StoreContext = createContext(null)
 
 export const StoreProvider = ({ children }) => {
-  const [settings, setSettings] = useState(null)
+  const [settings, setSettings] = useState(() => ({
+    ...mockSettings,
+    whatsapp_number: import.meta.env.VITE_WHATSAPP_NUMBER || mockSettings.whatsapp_number,
+  }))
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const fetchSettings = async () => {
-      if (isDemoMode) {
-        setSettings(mockSettings)
+      if (isDemoMode || !db) {
         setLoading(false)
         return
       }
-      const { data, error } = await supabase
-        .from('store_settings')
-        .select('*')
-        .single()
-      if (!error && data) setSettings(data)
-      setLoading(false)
+
+      try {
+        const docRef = doc(db, 'store_settings', 'general')
+        const docSnap = await getDoc(docRef)
+        if (docSnap.exists()) {
+          setSettings({
+            ...mockSettings,
+            ...docSnap.data(),
+            whatsapp_number: import.meta.env.VITE_WHATSAPP_NUMBER || docSnap.data().whatsapp_number || mockSettings.whatsapp_number,
+          })
+        }
+      } catch (err) {
+        console.warn('Usando configuración de tienda por defecto:', err.message)
+      } finally {
+        setLoading(false)
+      }
     }
     fetchSettings()
   }, [])

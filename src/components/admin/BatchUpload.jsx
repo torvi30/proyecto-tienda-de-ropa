@@ -5,7 +5,9 @@ import {
 } from 'lucide-react'
 import useImageCompressor from '../../hooks/useImageCompressor'
 import useCategories from '../../hooks/useCategories'
-import { supabase, isDemoMode } from '../../lib/supabaseClient'
+import { db, isDemoMode } from '../../lib/firebaseClient'
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
+import { uploadToCloudinary } from '../../lib/cloudinary'
 import toast from 'react-hot-toast'
 
 const MAX_FILES = 20
@@ -136,25 +138,14 @@ const BatchUpload = ({ onSuccess }) => {
         let imageUrl = item.previewUrl
 
         if (!isDemoMode) {
-          // Subir imagen a Supabase Storage
-          const fileName = `products/${Date.now()}-${crypto.randomUUID().slice(0, 8)}.webp`
-          const { error: uploadError } = await supabase.storage
-            .from('product-images')
-            .upload(fileName, item.file, {
-              contentType: 'image/webp',
-              upsert: false,
-            })
+          // 1. Subir imagen a Cloudinary (WebP optimizado)
+          const uploadRes = await uploadToCloudinary(item.file, item.name)
+          imageUrl = uploadRes.secure_url
 
-          if (uploadError) throw new Error(uploadError.message)
+          // 2. Crear documento en Firestore
+          if (!db) throw new Error('Firestore no está inicializado. Revisa .env.local')
 
-          const { data: urlData } = supabase.storage
-            .from('product-images')
-            .getPublicUrl(fileName)
-
-          imageUrl = urlData.publicUrl
-
-          // Crear registro en BD
-          const { error: dbError } = await supabase.from('products').insert({
+          await addDoc(collection(db, 'products'), {
             name: item.name.trim(),
             price: parseFloat(item.price),
             category_id: item.categoryId || null,
@@ -162,9 +153,8 @@ const BatchUpload = ({ onSuccess }) => {
             image_url: imageUrl,
             stock_status: 'available',
             is_visible: true,
+            created_at: serverTimestamp(),
           })
-
-          if (dbError) throw new Error(dbError.message)
         }
 
         savedCount++

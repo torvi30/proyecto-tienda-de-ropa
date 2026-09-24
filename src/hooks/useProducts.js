@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { supabase, isDemoMode } from '../lib/supabaseClient'
+import { db, isDemoMode } from '../lib/firebaseClient'
+import { collection, getDocs, query, orderBy } from 'firebase/firestore'
 import { mockProducts } from '../lib/mockData'
 
 const useProducts = () => {
@@ -9,27 +10,37 @@ const useProducts = () => {
 
   useEffect(() => {
     const fetchProducts = async () => {
-      if (isDemoMode) {
-        // Simular un pequeño delay para que se vea el skeleton
-        await new Promise((r) => setTimeout(r, 600))
+      if (isDemoMode || !db) {
+        await new Promise((r) => setTimeout(r, 400))
         setProducts(mockProducts.filter((p) => p.is_visible && p.stock_status !== 'sold_out'))
         setLoading(false)
         return
       }
 
-      const { data, error: err } = await supabase
-        .from('products')
-        .select('*, categories(name, slug)')
-        .eq('is_visible', true)
-        .neq('stock_status', 'sold_out')
-        .order('created_at', { ascending: false })
+      try {
+        const q = query(collection(db, 'products'), orderBy('created_at', 'desc'))
+        const querySnapshot = await getDocs(q)
+        const items = []
+        querySnapshot.forEach((doc) => {
+          const data = doc.data()
+          if (data.is_visible !== false && data.stock_status !== 'sold_out') {
+            items.push({ id: doc.id, ...data })
+          }
+        })
 
-      if (err) {
+        // Si la colección de Firestore está vacía aún, mostrar productos demo iniciales
+        if (items.length === 0) {
+          setProducts(mockProducts.filter((p) => p.is_visible && p.stock_status !== 'sold_out'))
+        } else {
+          setProducts(items)
+        }
+      } catch (err) {
+        console.error('Error al cargar productos de Firestore:', err)
         setError(err.message)
-      } else {
-        setProducts(data || [])
+        setProducts(mockProducts.filter((p) => p.is_visible && p.stock_status !== 'sold_out'))
+      } finally {
+        setLoading(false)
       }
-      setLoading(false)
     }
 
     fetchProducts()

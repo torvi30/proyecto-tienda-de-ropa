@@ -1,6 +1,15 @@
 import { useState, useEffect } from 'react'
 import { Circle, Pencil, Trash2, Eye, EyeOff, Check, X, Loader2 } from 'lucide-react'
-import { supabase, isDemoMode } from '../../lib/supabaseClient'
+import { db, isDemoMode } from '../../lib/firebaseClient'
+import {
+  collection,
+  getDocs,
+  doc,
+  updateDoc,
+  deleteDoc,
+  query,
+  orderBy,
+} from 'firebase/firestore'
 import { mockProducts } from '../../lib/mockData'
 import StockBadge from '../shared/StockBadge'
 import Spinner from '../shared/Spinner'
@@ -29,18 +38,25 @@ const ProductList = ({ refreshKey }) => {
 
   const fetchProducts = async () => {
     setLoading(true)
-    if (isDemoMode) {
+    if (isDemoMode || !db) {
       await new Promise((r) => setTimeout(r, 400))
       setProducts(mockProducts)
       setLoading(false)
       return
     }
-    const { data } = await supabase
-      .from('products')
-      .select('*, categories(name)')
-      .order('created_at', { ascending: false })
-    setProducts(data || [])
-    setLoading(false)
+
+    try {
+      const q = query(collection(db, 'products'), orderBy('created_at', 'desc'))
+      const snapshot = await getDocs(q)
+      const list = []
+      snapshot.forEach((d) => list.push({ id: d.id, ...d.data() }))
+      setProducts(list.length > 0 ? list : mockProducts)
+    } catch (err) {
+      console.error('Error fetching admin products from Firestore:', err)
+      setProducts(mockProducts)
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => { fetchProducts() }, [refreshKey])
@@ -57,12 +73,15 @@ const ProductList = ({ refreshKey }) => {
       )
     )
 
-    if (!isDemoMode) {
-      const { error } = await supabase
-        .from('products')
-        .update({ stock_status: nextStatus })
-        .eq('id', product.id)
-      if (error) toast.error('Error al actualizar el stock')
+    if (!isDemoMode && db) {
+      try {
+        await updateDoc(doc(db, 'products', product.id), {
+          stock_status: nextStatus,
+        })
+      } catch (err) {
+        console.error('Error updating stock in Firestore:', err)
+        toast.error('Error al actualizar el stock en Firestore')
+      }
     }
 
     toast.success(`${product.name}: ${STOCK_LABELS[nextStatus]}`, { duration: 2000 })
@@ -79,11 +98,15 @@ const ProductList = ({ refreshKey }) => {
       )
     )
 
-    if (!isDemoMode) {
-      await supabase
-        .from('products')
-        .update({ is_visible: newVisible })
-        .eq('id', product.id)
+    if (!isDemoMode && db) {
+      try {
+        await updateDoc(doc(db, 'products', product.id), {
+          is_visible: newVisible,
+        })
+      } catch (err) {
+        console.error('Error updating visibility in Firestore:', err)
+        toast.error('Error al actualizar visibilidad')
+      }
     }
 
     toast.success(
@@ -96,8 +119,13 @@ const ProductList = ({ refreshKey }) => {
   // Eliminar producto
   const deleteProduct = async (product) => {
     setUpdating(product.id)
-    if (!isDemoMode) {
-      await supabase.from('products').delete().eq('id', product.id)
+    if (!isDemoMode && db) {
+      try {
+        await deleteDoc(doc(db, 'products', product.id))
+      } catch (err) {
+        console.error('Error deleting product in Firestore:', err)
+        toast.error('Error al eliminar producto')
+      }
     }
     setProducts((prev) => prev.filter((p) => p.id !== product.id))
     setDeleteConfirm(null)

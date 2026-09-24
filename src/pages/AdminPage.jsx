@@ -8,7 +8,7 @@ import useAuth from '../hooks/useAuth'
 import BatchUpload from '../components/admin/BatchUpload'
 import ProductList from '../components/admin/ProductList'
 import Spinner from '../components/shared/Spinner'
-import { isDemoMode } from '../lib/supabaseClient'
+import { isDemoMode } from '../lib/firebaseClient'
 
 const TABS = [
   { id: 'upload',   label: 'Subir fotos',  icon: Upload },
