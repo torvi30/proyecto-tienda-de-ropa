@@ -63,7 +63,11 @@ const ProductCard = ({ product }) => {
 
   return (
     <article
-      className='product-card group flex flex-col bg-gray-900/60 border border-gray-800/80 rounded-2xl overflow-hidden hover:border-brand-500/40 transition-all duration-300'
+      className={`product-card group flex flex-col rounded-2xl overflow-hidden transition-all duration-300 ${
+        selectedSize
+          ? 'bg-gray-900/90 border-2 border-brand-500 shadow-2xl shadow-brand-500/25 ring-2 ring-brand-500/30 -translate-y-1'
+          : 'bg-gray-900/60 border border-gray-800/80 hover:border-brand-500/40 hover:-translate-y-1'
+      }`}
       id={`product-${product.id}`}
     >
       {/* Contenedor de Imagen con ratio 4:5 y Zoom Interactivo al tocar */}
@@ -116,12 +120,22 @@ const ProductCard = ({ product }) => {
           )}
         </div>
 
+        {/* Badge inferior de Prenda Seleccionada cuando se escoge una talla */}
+        {selectedSize && (
+          <div className='absolute bottom-2.5 left-2.5 z-10 animate-scale-in'>
+            <span className='inline-flex items-center gap-1.5 bg-gradient-to-r from-brand-600 via-purple-600 to-pink-600 text-white font-bold text-xs px-2.5 py-1 rounded-full shadow-xl shadow-brand-500/40 border border-brand-300/80'>
+              <Check size={13} className='text-white stroke-[3]' />
+              <span>Talla {selectedSize}</span>
+            </span>
+          </div>
+        )}
+
         {/* Botón flotante para ver en detalle / Zoom estilo Shein */}
         <div
-          className='absolute bottom-2.5 right-2.5 z-10 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gray-950/70 hover:bg-gray-900 text-gray-300 hover:text-white border border-gray-700/60 backdrop-blur-md flex items-center justify-center shadow-lg transition-transform active:scale-90 opacity-90 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity'
-          title='Ver en detalle / Zoom'
+          className='absolute bottom-2.5 right-2.5 z-10 w-8 h-8 rounded-full bg-gray-950/80 hover:bg-brand-600 text-gray-200 hover:text-white border border-gray-700/80 hover:border-brand-400 backdrop-blur-md flex items-center justify-center shadow-xl transition-all active:scale-90 opacity-90 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity'
+          title='Ver en detalle / Zoom HD'
         >
-          <ZoomIn size={14} />
+          <ZoomIn size={15} />
         </div>
       </div>
 
@@ -176,7 +190,7 @@ const ProductCard = ({ product }) => {
                 {selectedSize ? `Selección: ${selectedSize}` : 'Elige talla o medida'}
               </span>
             </div>
-            <div className='flex flex-wrap gap-1.5'>
+            <div className='flex flex-wrap gap-2'>
               {product.sizes.map((size) => {
                 const isSelected = selectedSize === size
                 return (
@@ -185,12 +199,14 @@ const ProductCard = ({ product }) => {
                     type='button'
                     id={`size-${product.id}-${size}`}
                     onClick={() => setSelectedSize(isSelected && product.sizes.length > 1 ? null : size)}
-                    className={`size-chip flex items-center gap-1 ${
-                      isSelected ? 'size-chip-active' : 'size-chip-inactive'
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl border transition-all duration-200 cursor-pointer select-none active:scale-95 touch-manipulation ${
+                      isSelected
+                        ? 'bg-gradient-to-r from-brand-600 via-purple-600 to-brand-500 text-white border-brand-300 shadow-lg shadow-brand-500/40 scale-105 ring-2 ring-brand-400/50'
+                        : 'bg-gray-800/80 border-gray-700 text-gray-300 hover:border-brand-400/80 hover:text-white hover:bg-gray-800'
                     }`}
                   >
-                    {size}
-                    {isSelected && <Check size={11} className='text-brand-300' />}
+                    <span>{size}</span>
+                    {isSelected && <Check size={12} className='text-white stroke-[3]' />}
                   </button>
                 )
               })}
@@ -206,7 +222,7 @@ const ProductCard = ({ product }) => {
             justAdded
               ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/30 scale-[1.02]'
               : selectedSize
-              ? 'btn-primary shadow-lg shadow-brand-500/20 active:scale-[0.98]'
+              ? 'bg-gradient-to-r from-brand-600 via-purple-600 to-brand-500 hover:from-brand-500 hover:to-purple-500 text-white shadow-xl shadow-brand-500/30 ring-2 ring-brand-400/30 active:scale-[0.98]'
               : 'bg-gray-800 hover:bg-gray-700/80 text-gray-200 border border-gray-700 active:scale-[0.98]'
           }`}
         >

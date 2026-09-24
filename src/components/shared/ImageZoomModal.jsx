@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import {
   X, ZoomIn, ZoomOut, RotateCcw, ChevronLeft, ChevronRight,
   Crop, Sparkles, Flame, ShoppingBag, MessageCircle, Check,
@@ -258,9 +259,9 @@ const ImageZoomModal = ({
     openWhatsAppCheckout(singleItem, settings)
   }
 
-  return (
+  const modalContent = (
     <div
-      className='fixed inset-0 z-50 flex flex-col bg-gray-950/95 backdrop-blur-2xl text-gray-100 select-none animate-fade-in'
+      className='fixed inset-0 z-[9999] flex flex-col bg-gray-950/95 backdrop-blur-2xl text-gray-100 select-none animate-fade-in'
       onClick={onClose}
     >
       {/* 1. Barra Superior de Control de Lujo */}
@@ -547,7 +548,7 @@ const ImageZoomModal = ({
               {/* Tallas y Botón de Agregar a la bolsa */}
               <div className='flex items-center flex-wrap gap-2 w-full sm:w-auto justify-end'>
                 {product.sizes && product.sizes.length > 0 && (
-                  <div className='flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5'>
+                  <div className='flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1'>
                     {product.sizes.map((sz) => {
                       const isSelected = selectedSize === sz
                       return (
@@ -555,13 +556,14 @@ const ImageZoomModal = ({
                           key={sz}
                           type='button'
                           onClick={() => setSelectedSize(sz)}
-                          className={`px-2.5 py-1 rounded-xl text-xs font-semibold border transition-all ${
+                          className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer select-none active:scale-95 ${
                             isSelected
-                              ? 'bg-brand-600 border-brand-500 text-white shadow-md shadow-brand-500/25 scale-105'
-                              : 'bg-gray-900 border-gray-800 text-gray-400 hover:text-white'
+                              ? 'bg-gradient-to-r from-brand-600 via-purple-600 to-brand-500 text-white border-brand-300 shadow-xl shadow-brand-500/40 scale-105 ring-2 ring-brand-400/50'
+                              : 'bg-gray-900 border-gray-800 text-gray-300 hover:text-white hover:border-brand-500/50'
                           }`}
                         >
-                          {sz}
+                          <span>{sz}</span>
+                          {isSelected && <Check size={12} className='text-white stroke-[3]' />}
                         </button>
                       )
                     })}
@@ -640,6 +642,11 @@ const ImageZoomModal = ({
       </footer>
     </div>
   )
+
+  if (typeof document !== 'undefined') {
+    return createPortal(modalContent, document.body)
+  }
+  return modalContent
 }
 
 export default ImageZoomModal
