@@ -8,7 +8,6 @@ import useAuth from '../hooks/useAuth'
 import BatchUpload from '../components/admin/BatchUpload'
 import ProductList from '../components/admin/ProductList'
 import Spinner from '../components/shared/Spinner'
-import { isDemoMode } from '../lib/firebaseClient'
 
 const TABS = [
   { id: 'upload',   label: 'Subir fotos',  icon: Upload },
@@ -46,9 +45,10 @@ const AdminPage = () => {
             </div>
             <div>
               <h1 className='text-gray-100 font-semibold text-sm leading-tight'>Panel Admin</h1>
-              {isDemoMode && (
-                <span className='text-brand-400 text-xs'>Modo Demo</span>
-              )}
+              <span className='text-emerald-400 text-xs flex items-center gap-1 font-medium'>
+                <span className='w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block animate-pulse'></span>
+                Conectado a Firebase
+              </span>
             </div>
           </div>
 
@@ -79,13 +79,11 @@ const AdminPage = () => {
 
       {/* Stats rápidas */}
       <div className='bg-gradient-to-r from-brand-900/20 to-gray-900/50 border-b border-gray-800'>
-        <div className='page-container py-4'>
+        <div className='page-container py-3 sm:py-4'>
           <div className='flex items-center gap-2'>
-            <Zap size={16} className='text-brand-400' />
-            <p className='text-gray-300 text-sm'>
-              {isDemoMode
-                ? 'Modo Demo — los cambios no se guardarán en base de datos'
-                : `Sesión activa: ${user?.email}`}
+            <Zap size={16} className='text-brand-400 shrink-0' />
+            <p className='text-gray-300 text-xs sm:text-sm truncate'>
+              Sesión activa: <span className='text-brand-300 font-semibold'>{user?.email}</span>
             </p>
           </div>
         </div>

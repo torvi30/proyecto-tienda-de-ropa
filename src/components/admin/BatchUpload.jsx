@@ -5,7 +5,7 @@ import {
 } from 'lucide-react'
 import useImageCompressor from '../../hooks/useImageCompressor'
 import useCategories from '../../hooks/useCategories'
-import { db, isDemoMode } from '../../lib/firebaseClient'
+import { db } from '../../lib/firebaseClient'
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
 import { uploadToCloudinary } from '../../lib/cloudinary'
 import toast from 'react-hot-toast'
@@ -135,27 +135,23 @@ const BatchUpload = ({ onSuccess }) => {
       )
 
       try {
-        let imageUrl = item.previewUrl
+        // 1. Subir imagen a Cloudinary (WebP optimizado)
+        const uploadRes = await uploadToCloudinary(item.file, item.name)
+        const imageUrl = uploadRes.secure_url
 
-        if (!isDemoMode) {
-          // 1. Subir imagen a Cloudinary (WebP optimizado)
-          const uploadRes = await uploadToCloudinary(item.file, item.name)
-          imageUrl = uploadRes.secure_url
+        // 2. Crear documento en Firestore
+        if (!db) throw new Error('Firestore no está inicializado. Revisa tu archivo .env')
 
-          // 2. Crear documento en Firestore
-          if (!db) throw new Error('Firestore no está inicializado. Revisa .env.local')
-
-          await addDoc(collection(db, 'products'), {
-            name: item.name.trim(),
-            price: parseFloat(item.price),
-            category_id: item.categoryId || null,
-            sizes: item.sizes,
-            image_url: imageUrl,
-            stock_status: 'available',
-            is_visible: true,
-            created_at: serverTimestamp(),
-          })
-        }
+        await addDoc(collection(db, 'products'), {
+          name: item.name.trim(),
+          price: parseFloat(item.price),
+          category_id: item.categoryId || null,
+          sizes: item.sizes,
+          image_url: imageUrl,
+          stock_status: 'available',
+          is_visible: true,
+          created_at: serverTimestamp(),
+        })
 
         savedCount++
         setItems((prev) =>

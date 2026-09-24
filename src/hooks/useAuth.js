@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { auth, isDemoMode } from '../lib/firebaseClient'
+import { auth } from '../lib/firebaseClient'
 import {
   signInWithEmailAndPassword,
   signOut as firebaseSignOut,
@@ -11,12 +11,6 @@ const useAuth = () => {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (isDemoMode) {
-      setUser({ email: 'admin@demo.com', uid: 'demo-admin-uid' })
-      setLoading(false)
-      return
-    }
-
     if (!auth) {
       setLoading(false)
       return
@@ -31,16 +25,10 @@ const useAuth = () => {
   }, [])
 
   const signIn = async (email, password) => {
-    if (isDemoMode) {
-      const demoUser = { email, uid: 'demo-admin-uid' }
-      setUser(demoUser)
-      return { user: demoUser, error: null }
-    }
-
     if (!auth) {
       return {
         user: null,
-        error: { message: 'Firebase Auth no está configurado. Revisa tu archivo .env.local' },
+        error: { message: 'Firebase Auth no está inicializado. Revisa tus variables en .env' },
       }
     }
 
@@ -53,11 +41,6 @@ const useAuth = () => {
   }
 
   const signOut = async () => {
-    if (isDemoMode) {
-      setUser(null)
-      return { error: null }
-    }
-
     if (!auth) {
       setUser(null)
       return { error: null }

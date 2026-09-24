@@ -5,7 +5,6 @@
 
 const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || 'bchdrvef'
 const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || 'tienda_ropa'
-const IS_DEMO = import.meta.env.VITE_DEMO_MODE === 'true'
 
 /**
  * Sube un archivo o blob (comprimido en WebP) a Cloudinary
@@ -14,17 +13,6 @@ const IS_DEMO = import.meta.env.VITE_DEMO_MODE === 'true'
  * @returns {Promise<{ url: string, secure_url: string, public_id: string }>}
  */
 export const uploadToCloudinary = async (file, fileName = 'producto') => {
-  if (IS_DEMO) {
-    // En modo demo sin internet, simular subida exitosa
-    await new Promise((resolve) => setTimeout(resolve, 600))
-    const fakeUrl = URL.createObjectURL(file)
-    return {
-      url: fakeUrl,
-      secure_url: fakeUrl,
-      public_id: `demo_${Date.now()}`,
-    }
-  }
-
   if (!CLOUD_NAME) {
     throw new Error('Falta VITE_CLOUDINARY_CLOUD_NAME en las variables de entorno')
   }

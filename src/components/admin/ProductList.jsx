@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Circle, Pencil, Trash2, Eye, EyeOff, Check, X, Loader2 } from 'lucide-react'
-import { db, isDemoMode } from '../../lib/firebaseClient'
+import { db } from '../../lib/firebaseClient'
 import {
   collection,
   getDocs,
@@ -10,7 +10,6 @@ import {
   query,
   orderBy,
 } from 'firebase/firestore'
-import { mockProducts } from '../../lib/mockData'
 import StockBadge from '../shared/StockBadge'
 import Spinner from '../shared/Spinner'
 import toast from 'react-hot-toast'
@@ -38,9 +37,8 @@ const ProductList = ({ refreshKey }) => {
 
   const fetchProducts = async () => {
     setLoading(true)
-    if (isDemoMode || !db) {
-      await new Promise((r) => setTimeout(r, 400))
-      setProducts(mockProducts)
+    if (!db) {
+      setProducts([])
       setLoading(false)
       return
     }
@@ -50,10 +48,11 @@ const ProductList = ({ refreshKey }) => {
       const snapshot = await getDocs(q)
       const list = []
       snapshot.forEach((d) => list.push({ id: d.id, ...d.data() }))
-      setProducts(list.length > 0 ? list : mockProducts)
+      setProducts(list)
     } catch (err) {
       console.error('Error fetching admin products from Firestore:', err)
-      setProducts(mockProducts)
+      toast.error('Error al cargar inventario de Firestore')
+      setProducts([])
     } finally {
       setLoading(false)
     }
@@ -73,7 +72,7 @@ const ProductList = ({ refreshKey }) => {
       )
     )
 
-    if (!isDemoMode && db) {
+    if (db) {
       try {
         await updateDoc(doc(db, 'products', product.id), {
           stock_status: nextStatus,
@@ -98,7 +97,7 @@ const ProductList = ({ refreshKey }) => {
       )
     )
 
-    if (!isDemoMode && db) {
+    if (db) {
       try {
         await updateDoc(doc(db, 'products', product.id), {
           is_visible: newVisible,
@@ -119,7 +118,7 @@ const ProductList = ({ refreshKey }) => {
   // Eliminar producto
   const deleteProduct = async (product) => {
     setUpdating(product.id)
-    if (!isDemoMode && db) {
+    if (db) {
       try {
         await deleteDoc(doc(db, 'products', product.id))
       } catch (err) {

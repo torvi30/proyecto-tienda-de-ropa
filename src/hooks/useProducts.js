@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { db, isDemoMode } from '../lib/firebaseClient'
+import { db } from '../lib/firebaseClient'
 import { collection, getDocs, query, orderBy } from 'firebase/firestore'
 import { mockProducts } from '../lib/mockData'
 
@@ -10,8 +10,7 @@ const useProducts = () => {
 
   useEffect(() => {
     const fetchProducts = async () => {
-      if (isDemoMode || !db) {
-        await new Promise((r) => setTimeout(r, 400))
+      if (!db) {
         setProducts(mockProducts.filter((p) => p.is_visible && p.stock_status !== 'sold_out'))
         setLoading(false)
         return
@@ -28,7 +27,7 @@ const useProducts = () => {
           }
         })
 
-        // Si la colección de Firestore está vacía aún, mostrar productos demo iniciales
+        // Si la base de datos aún no tiene prendas creadas, mostrar prendas de demostración
         if (items.length === 0) {
           setProducts(mockProducts.filter((p) => p.is_visible && p.stock_status !== 'sold_out'))
         } else {

@@ -3,7 +3,6 @@ import { Navigate } from 'react-router-dom'
 import { Eye, EyeOff, LogIn, Lock, AlertCircle } from 'lucide-react'
 import useAuth from '../hooks/useAuth'
 import Spinner from '../components/shared/Spinner'
-import { isDemoMode } from '../lib/firebaseClient'
 
 const LoginPage = () => {
   const { user, loading, signIn } = useAuth()
@@ -67,15 +66,6 @@ const LoginPage = () => {
             </h1>
             <p className='text-gray-500 text-sm mt-1'>Acceso exclusivo al administrador</p>
           </div>
-
-          {/* Banner modo demo */}
-          {isDemoMode && (
-            <div className='bg-brand-600/10 border border-brand-500/30 rounded-xl p-3 mb-6 text-center'>
-              <p className='text-brand-300 text-xs font-medium'>
-                🎭 Modo Demo activo — accede con cualquier credencial
-              </p>
-            </div>
-          )}
 
           {/* Formulario */}
           <form onSubmit={handleSubmit} className='space-y-5' id='login-form'>

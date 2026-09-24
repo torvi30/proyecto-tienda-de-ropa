@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react'
-import { db, isDemoMode } from '../lib/firebaseClient'
+import { db } from '../lib/firebaseClient'
 import { doc, getDoc } from 'firebase/firestore'
 import { mockSettings } from '../lib/mockData'
 
@@ -14,7 +14,7 @@ export const StoreProvider = ({ children }) => {
 
   useEffect(() => {
     const fetchSettings = async () => {
-      if (isDemoMode || !db) {
+      if (!db) {
         setLoading(false)
         return
       }

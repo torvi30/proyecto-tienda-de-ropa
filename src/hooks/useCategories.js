@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { db, isDemoMode } from '../lib/firebaseClient'
+import { db } from '../lib/firebaseClient'
 import { collection, getDocs, query, orderBy } from 'firebase/firestore'
 import { mockCategories } from '../lib/mockData'
 
@@ -9,7 +9,7 @@ const useCategories = () => {
 
   useEffect(() => {
     const fetchCategories = async () => {
-      if (isDemoMode || !db) {
+      if (!db) {
         setCategories(mockCategories)
         setLoading(false)
         return
