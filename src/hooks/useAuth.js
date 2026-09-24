@@ -2,6 +2,10 @@ import { useState, useEffect } from 'react'
 import { auth } from '../lib/firebaseClient'
 import {
   signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  sendEmailVerification,
+  sendPasswordResetEmail,
+  updateProfile,
   signInWithPopup,
   GoogleAuthProvider,
   signOut as firebaseSignOut,
@@ -61,6 +65,61 @@ const useAuth = () => {
     }
   }
 
+  const signUp = async (email, password, displayName = '') => {
+    if (!auth) {
+      return {
+        user: null,
+        error: { message: 'Firebase Auth no está inicializado. Revisa tus variables en .env' },
+      }
+    }
+
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password)
+      if (displayName && userCredential.user) {
+        try {
+          await updateProfile(userCredential.user, { displayName })
+        } catch (e) {
+          console.warn('No se pudo actualizar nombre de perfil:', e)
+        }
+      }
+
+      // Enviar correo de verificación de Firebase con token
+      try {
+        await sendEmailVerification(userCredential.user)
+      } catch (e) {
+        console.warn('No se pudo enviar correo de verificación:', e)
+      }
+
+      return { user: userCredential.user, error: null }
+    } catch (error) {
+      return { user: null, error }
+    }
+  }
+
+  const sendVerification = async () => {
+    if (!auth?.currentUser) {
+      return { error: { message: 'No hay usuario autenticado actualmente.' } }
+    }
+    try {
+      await sendEmailVerification(auth.currentUser)
+      return { error: null }
+    } catch (error) {
+      return { error }
+    }
+  }
+
+  const resetPassword = async (email) => {
+    if (!auth) {
+      return { error: { message: 'Firebase Auth no está inicializado.' } }
+    }
+    try {
+      await sendPasswordResetEmail(auth, email)
+      return { error: null }
+    } catch (error) {
+      return { error }
+    }
+  }
+
   const signOut = async () => {
     if (!auth) {
       setUser(null)
@@ -76,7 +135,16 @@ const useAuth = () => {
     }
   }
 
-  return { user, loading, signIn, signInWithGoogle, signOut }
+  return {
+    user,
+    loading,
+    signIn,
+    signUp,
+    signInWithGoogle,
+    sendVerification,
+    resetPassword,
+    signOut,
+  }
 }
 
 export default useAuth

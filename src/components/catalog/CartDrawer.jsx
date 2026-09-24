@@ -1,4 +1,5 @@
-import { X, Trash2, Plus, Minus, ShoppingBag, MessageCircle } from 'lucide-react'
+import { useState } from 'react'
+import { X, Trash2, Plus, Minus, ShoppingBag, MessageCircle, Flame, Clock, MapPin } from 'lucide-react'
 import { useCart } from '../../store/CartContext'
 import { useStore } from '../../store/StoreContext'
 import { openWhatsAppCheckout, formatPrice } from '../../lib/whatsapp'
@@ -9,6 +10,30 @@ const CartDrawer = () => {
     useCart()
   const { settings } = useStore()
 
+  // Datos de entrega del cliente persistidos en localStorage
+  const [deliveryInfo, setDeliveryInfo] = useState(() => {
+    try {
+      return (
+        JSON.parse(localStorage.getItem('boutique_delivery_info')) || {
+          name: '',
+          phone: '',
+          city: '',
+          address: '',
+        }
+      )
+    } catch {
+      return { name: '', phone: '', city: '', address: '' }
+    }
+  })
+
+  const updateDelivery = (field, val) => {
+    setDeliveryInfo((prev) => {
+      const updated = { ...prev, [field]: val }
+      localStorage.setItem('boutique_delivery_info', JSON.stringify(updated))
+      return updated
+    })
+  }
+
   const handleCheckout = () => {
     if (items.length === 0) {
       toast.error('El carrito está vacío')
@@ -18,7 +43,7 @@ const CartDrawer = () => {
       toast.error('Número de WhatsApp no configurado')
       return
     }
-    openWhatsAppCheckout(items, settings)
+    openWhatsAppCheckout(items, settings, deliveryInfo)
     toast.success('¡Redirigiendo a WhatsApp! 🎉')
   }
 
@@ -79,6 +104,20 @@ const CartDrawer = () => {
           </div>
         </div>
 
+        {/* Banner de Urgencia / Reserva temporal estilo Shein */}
+        {items.length > 0 && (
+          <div className='bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-amber-500/5 border-b border-amber-500/20 px-4 py-2 flex items-center justify-between text-xs text-amber-300 animate-fade-in'>
+            <div className='flex items-center gap-1.5'>
+              <Flame size={14} className='text-amber-400 fill-current animate-pulse' />
+              <span className='font-semibold'>Prendas en alta demanda</span>
+            </div>
+            <span className='text-[11px] text-amber-400/90 font-medium flex items-center gap-1'>
+              <Clock size={12} />
+              <span>Reserva temporal activa</span>
+            </span>
+          </div>
+        )}
+
         {/* Items del carrito */}
         <div className='flex-1 overflow-y-auto p-4 sm:p-5 space-y-3'>
           {items.length === 0 ? (
@@ -132,13 +171,30 @@ const CartDrawer = () => {
                       </button>
                     </div>
 
-                    <div className='flex items-center gap-2 mt-1'>
+                    <div className='flex items-center flex-wrap gap-2 mt-1'>
                       <span className='bg-brand-500/20 text-brand-300 border border-brand-500/30 text-[11px] font-bold px-2 py-0.5 rounded-full'>
                         Talla {item.size}
                       </span>
-                      <span className='text-gray-500 text-xs'>
-                        {formatPrice(item.product.price, sym, code)} c/u
-                      </span>
+                      {item.product?.stock_status === 'low_stock' && (
+                        <span className='inline-flex items-center gap-1 bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full'>
+                          <Flame size={10} className='fill-current' />
+                          Pocas unidades
+                        </span>
+                      )}
+                      {item.product?.is_on_sale && item.product?.original_price > item.product?.price ? (
+                        <div className='flex items-center gap-1.5'>
+                          <span className='text-pink-400 font-bold text-xs tabular-nums'>
+                            {formatPrice(item.product.price, sym, code)}
+                          </span>
+                          <span className='text-gray-500 text-[11px] line-through tabular-nums'>
+                            {formatPrice(item.product.original_price, sym, code)}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className='text-gray-500 text-xs tabular-nums'>
+                          {formatPrice(item.product.price, sym, code)} c/u
+                        </span>
+                      )}
                     </div>
                   </div>
 
@@ -176,7 +232,43 @@ const CartDrawer = () => {
 
         {/* Footer con total y checkout */}
         {items.length > 0 && (
-          <div className='p-4 sm:p-5 border-t border-gray-800 bg-gray-950/70 space-y-3.5 pb-6 sm:pb-6'>
+          <div className='p-4 sm:p-5 border-t border-gray-800 bg-gray-950/70 space-y-3 pb-6 sm:pb-6'>
+            {/* Datos para el Envío (Auto-guardable) */}
+            <div className='bg-gray-900/90 border border-gray-800 rounded-2xl p-3 space-y-2 text-left'>
+              <div className='flex items-center justify-between'>
+                <div className='flex items-center gap-1.5 text-xs font-semibold text-gray-200'>
+                  <MapPin size={13} className='text-brand-400' />
+                  <span>Datos para el Envío</span>
+                </div>
+                <span className='text-[10px] text-emerald-400 font-medium'>Se guarda solo ✓</span>
+              </div>
+
+              <div className='grid grid-cols-2 gap-2'>
+                <input
+                  type='text'
+                  value={deliveryInfo.name}
+                  onChange={(e) => updateDelivery('name', e.target.value)}
+                  placeholder='Tu Nombre'
+                  className='w-full px-2.5 py-1.5 bg-gray-950 border border-gray-750 rounded-xl text-xs text-gray-100 placeholder-gray-500 focus:outline-none focus:border-brand-500'
+                />
+                <input
+                  type='text'
+                  value={deliveryInfo.city}
+                  onChange={(e) => updateDelivery('city', e.target.value)}
+                  placeholder='Ciudad'
+                  className='w-full px-2.5 py-1.5 bg-gray-950 border border-gray-750 rounded-xl text-xs text-gray-100 placeholder-gray-500 focus:outline-none focus:border-brand-500'
+                />
+              </div>
+
+              <input
+                type='text'
+                value={deliveryInfo.address}
+                onChange={(e) => updateDelivery('address', e.target.value)}
+                placeholder='Dirección de entrega y barrio'
+                className='w-full px-2.5 py-1.5 bg-gray-950 border border-gray-750 rounded-xl text-xs text-gray-100 placeholder-gray-500 focus:outline-none focus:border-brand-500'
+              />
+            </div>
+
             <div className='flex items-center justify-between'>
               <div>
                 <span className='text-gray-400 text-sm font-medium'>Total del pedido</span>

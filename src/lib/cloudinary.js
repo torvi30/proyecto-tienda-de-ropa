@@ -33,7 +33,10 @@ export const uploadToCloudinary = async (file, fileName = 'producto') => {
     const data = await response.json()
 
     if (!response.ok) {
-      const errorMsg = data?.error?.message || 'Error al subir imagen a Cloudinary'
+      let errorMsg = data?.error?.message || 'Error al subir imagen a Cloudinary'
+      if (errorMsg.toLowerCase().includes('upload preset not found')) {
+        errorMsg = `El upload preset "${UPLOAD_PRESET}" no existe en tu Cloudinary. Créalo como "Unsigned" en Cloudinary Console > Settings > Upload > Add upload preset.`
+      }
       console.error('Cloudinary upload error:', data)
       throw new Error(errorMsg)
     }

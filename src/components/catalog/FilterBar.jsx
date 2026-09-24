@@ -1,4 +1,4 @@
-import { SlidersHorizontal, X } from 'lucide-react'
+import { SlidersHorizontal, X, Flame, Star } from 'lucide-react'
 
 // Tallas globales del sistema
 const ALL_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'Única']
@@ -7,21 +7,29 @@ const FilterBar = ({
   categories,
   selectedCategory,
   selectedSize,
+  onlySales,
+  onlyFeatured,
   onCategoryChange,
   onSizeChange,
+  onToggleSales,
+  onToggleFeatured,
+  saleCount = 0,
+  featuredCount = 0,
   totalVisible,
 }) => {
-  const hasActiveFilter = selectedCategory || selectedSize
+  const hasActiveFilter = selectedCategory || selectedSize || onlySales || onlyFeatured
 
   const clearAll = () => {
     onCategoryChange(null)
     onSizeChange(null)
+    if (onToggleSales && onlySales) onToggleSales()
+    if (onToggleFeatured && onlyFeatured) onToggleFeatured()
   }
 
   return (
-    <div className='sticky top-[61px] sm:top-[69px] z-30 bg-gray-950/95 backdrop-blur-md border-b border-gray-800/80 py-2.5 transition-all duration-200'>
+    <div className='sticky top-[57px] sm:top-[61px] z-30 bg-gray-950/95 backdrop-blur-md border-b border-gray-800/80 py-2.5 transition-all duration-200'>
       <div className='page-container space-y-2'>
-        {/* Fila 1: Categorias con scroll horizontal suave */}
+        {/* Fila 1: Categorias, Ofertas y Destacados con scroll horizontal suave */}
         <div className='flex items-center gap-2'>
           <div className='flex items-center gap-1.5 text-gray-400 shrink-0 pr-1'>
             <SlidersHorizontal size={14} className='text-brand-400' />
@@ -29,11 +37,16 @@ const FilterBar = ({
           </div>
 
           <div className='flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5'>
+            {/* Botón Todas */}
             <button
               id='filter-all-categories'
-              onClick={() => onCategoryChange(null)}
+              onClick={() => {
+                onCategoryChange(null)
+                if (onlySales && onToggleSales) onToggleSales()
+                if (onlyFeatured && onToggleFeatured) onToggleFeatured()
+              }}
               className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 ${
-                !selectedCategory
+                !selectedCategory && !onlySales && !onlyFeatured
                   ? 'bg-brand-600 text-white shadow-md shadow-brand-600/30'
                   : 'bg-gray-900 border border-gray-800 text-gray-400 hover:border-gray-700 hover:text-gray-200'
               }`}
@@ -41,15 +54,49 @@ const FilterBar = ({
               Todas
             </button>
 
+            {/* Botón especial Destacados si hay prendas destacadas */}
+            {featuredCount > 0 && (
+              <button
+                id='filter-featured'
+                onClick={onToggleFeatured}
+                className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all duration-200 flex items-center gap-1.5 ${
+                  onlyFeatured
+                    ? 'bg-gradient-to-r from-amber-400 to-yellow-500 text-gray-950 shadow-md shadow-amber-400/30 ring-2 ring-amber-400/40'
+                    : 'bg-amber-400/10 border border-amber-400/30 text-amber-300 hover:bg-amber-400/20'
+                }`}
+              >
+                <Star size={13} className='fill-current' />
+                <span>Destacados ({featuredCount})</span>
+              </button>
+            )}
+
+            {/* Botón especial Ofertas si hay productos en oferta */}
+            {saleCount > 0 && (
+              <button
+                id='filter-sales'
+                onClick={onToggleSales}
+                className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all duration-200 flex items-center gap-1.5 ${
+                  onlySales
+                    ? 'bg-gradient-to-r from-pink-600 to-rose-600 text-white shadow-md shadow-pink-600/30 ring-2 ring-pink-400/40'
+                    : 'bg-pink-500/10 border border-pink-500/30 text-pink-400 hover:bg-pink-500/20'
+                }`}
+              >
+                <Flame size={13} className='fill-current' />
+                <span>Ofertas ({saleCount})</span>
+              </button>
+            )}
+
             {categories.map((cat) => (
               <button
                 key={cat.id}
                 id={`filter-cat-${cat.slug}`}
-                onClick={() =>
+                onClick={() => {
                   onCategoryChange(cat.id === selectedCategory ? null : cat.id)
-                }
+                  if (onlySales && onToggleSales) onToggleSales()
+                  if (onlyFeatured && onToggleFeatured) onToggleFeatured()
+                }}
                 className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 ${
-                  selectedCategory === cat.id
+                  selectedCategory === cat.id && !onlySales && !onlyFeatured
                     ? 'bg-brand-600 text-white shadow-md shadow-brand-600/30'
                     : 'bg-gray-900 border border-gray-800 text-gray-400 hover:border-gray-700 hover:text-gray-200'
                 }`}

@@ -1,17 +1,18 @@
 import { useState, useRef, useCallback } from 'react'
 import {
   Upload, X, CheckCircle, AlertCircle, Loader2,
-  ImagePlus, Zap, ChevronRight
+  ImagePlus, Zap, ChevronRight, Plus, ZoomIn
 } from 'lucide-react'
 import useImageCompressor from '../../hooks/useImageCompressor'
 import useCategories from '../../hooks/useCategories'
 import { db } from '../../lib/firebaseClient'
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
 import { uploadToCloudinary } from '../../lib/cloudinary'
+import SizeMeasurePicker from './SizeMeasurePicker'
+import ImageZoomModal from '../shared/ImageZoomModal'
 import toast from 'react-hot-toast'
 
 const MAX_FILES = 20
-const ALL_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'Única']
 
 // Estado inicial de cada item del lote
 const makeItem = (file, previewUrl, compressedSizeKB, originalSizeKB) => ({
@@ -36,6 +37,10 @@ const BatchUpload = ({ onSuccess }) => {
   const [isCompressing, setIsCompressing] = useState(false)
   const [compressProgress, setCompressProgress] = useState({ done: 0, total: 0 })
   const [isSaving, setIsSaving] = useState(false)
+  const [showNewCatModal, setShowNewCatModal] = useState(false)
+  const [newCatName, setNewCatName] = useState('')
+  const [creatingCat, setCreatingCat] = useState(false)
+  const [zoomModalItemIndex, setZoomModalItemIndex] = useState(null)
   const fileInputRef = useRef(null)
   const { compressBatch } = useImageCompressor()
   const { categories } = useCategories()
@@ -113,6 +118,43 @@ const BatchUpload = ({ onSuccess }) => {
     })
   }
 
+  // Creación rápida de categoría
+  const handleQuickCreateCategory = async (targetItemId) => {
+    const trimmed = newCatName.trim()
+    if (!trimmed) return
+    setCreatingCat(true)
+    try {
+      if (db) {
+        const slug = trimmed
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/(^-|-$)+/g, '')
+
+        const docRef = await addDoc(collection(db, 'categories'), {
+          name: trimmed,
+          slug,
+          sort_order: categories.length + 1,
+          is_active: true,
+          created_at: serverTimestamp(),
+        })
+
+        if (targetItemId) {
+          updateItem(targetItemId, 'categoryId', docRef.id)
+        }
+        toast.success(`Categoría "${trimmed}" creada`)
+      }
+      setNewCatName('')
+      setShowNewCatModal(null)
+    } catch (err) {
+      console.error(err)
+      toast.error('Error al crear categoría')
+    } finally {
+      setCreatingCat(false)
+    }
+  }
+
   // Guardar todo el lote
   const handleSaveAll = async () => {
     // Validar que todos los items tengan nombre y precio
@@ -173,6 +215,10 @@ const BatchUpload = ({ onSuccess }) => {
         duration: 5000,
       })
       if (onSuccess) onSuccess()
+    } else {
+      toast.error('No se pudo publicar ningún producto. Revisa el mensaje de error en cada tarjeta.', {
+        duration: 5000,
+      })
     }
   }
 
@@ -283,7 +329,7 @@ const BatchUpload = ({ onSuccess }) => {
 
       {/* Lista de items del lote */}
       <div className='space-y-4'>
-        {items.map((item) => (
+        {items.map((item, index) => (
           <div
             key={item.id}
             className={`bg-gray-800/60 border rounded-2xl overflow-hidden transition-all duration-200
@@ -292,11 +338,15 @@ const BatchUpload = ({ onSuccess }) => {
               ${item.status === 'idle' || item.status === 'uploading' ? 'border-gray-700' : ''}`}
           >
             <div className='flex flex-col sm:flex-row gap-3.5 sm:gap-4 p-3.5 sm:p-4'>
-              {/* Preview de la imagen comprimida y delete en movil */}
+              {/* Preview de la imagen comprimida con zoom al tocar */}
               <div className='flex items-start justify-between sm:block shrink-0'>
-                <div className='relative'>
+                <div
+                  onClick={() => setZoomModalItemIndex(index)}
+                  className='relative cursor-pointer group/thumb'
+                  title='Toca para ampliar y revisar detalles en HD'
+                >
                   <div
-                    className='w-20 sm:w-24 rounded-xl overflow-hidden bg-gray-700 shadow-md border border-gray-700/60'
+                    className='w-20 sm:w-24 rounded-xl overflow-hidden bg-gray-700 shadow-md border border-gray-700/60 transition-transform group-hover/thumb:scale-[1.03]'
                     style={{ aspectRatio: '4/5' }}
                   >
                     <img
@@ -304,6 +354,11 @@ const BatchUpload = ({ onSuccess }) => {
                       alt='Preview'
                       className='w-full h-full object-cover'
                     />
+                    {/* Overlay sutil de zoom al hacer hover */}
+                    <div className='absolute inset-0 bg-black/40 opacity-0 group-hover/thumb:opacity-100 transition-opacity flex flex-col items-center justify-center text-white gap-0.5 backdrop-blur-[1px]'>
+                      <ZoomIn size={18} />
+                      <span className='text-[10px] font-semibold'>Zoom</span>
+                    </div>
                   </div>
                   {/* Badge de compresion */}
                   <div className='absolute -bottom-1 -right-1 bg-gray-950/90 border border-gray-700 rounded-md px-1.5 py-0.5 text-[10px] text-green-400 font-mono'>
@@ -385,51 +440,81 @@ const BatchUpload = ({ onSuccess }) => {
 
                       {/* Categoria */}
                       <div>
-                        <label className='text-gray-400 text-xs font-semibold uppercase tracking-wider block mb-1'>
-                          Categoría
-                        </label>
-                        <select
-                          value={item.categoryId}
-                          onChange={(e) => updateItem(item.id, 'categoryId', e.target.value)}
-                          className='form-input text-sm py-2 sm:py-2.5 bg-gray-800'
-                        >
-                          <option value=''>Sin categoría</option>
-                          {categories.map((cat) => (
-                            <option key={cat.id} value={cat.id}>
-                              {cat.name}
-                            </option>
-                          ))}
-                        </select>
+                        <div className='flex items-center justify-between mb-1'>
+                          <label className='text-gray-400 text-xs font-semibold uppercase tracking-wider'>
+                            Categoría
+                          </label>
+                          {showNewCatModal !== item.id && (
+                            <button
+                              type='button'
+                              onClick={() => {
+                                setShowNewCatModal(item.id)
+                                setNewCatName('')
+                              }}
+                              className='text-brand-400 hover:text-brand-300 text-xs font-medium flex items-center gap-0.5'
+                            >
+                              <Plus size={12} />
+                              <span>+ Nueva</span>
+                            </button>
+                          )}
+                        </div>
+
+                        {showNewCatModal === item.id ? (
+                          <div className='flex items-center gap-1.5 animate-fade-in'>
+                            <input
+                              type='text'
+                              value={newCatName}
+                              onChange={(e) => setNewCatName(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault()
+                                  handleQuickCreateCategory(item.id)
+                                }
+                                if (e.key === 'Escape') setShowNewCatModal(null)
+                              }}
+                              placeholder='Nombre de categoría...'
+                              className='form-input text-xs py-2'
+                              autoFocus
+                            />
+                            <button
+                              type='button'
+                              onClick={() => handleQuickCreateCategory(item.id)}
+                              disabled={creatingCat || !newCatName.trim()}
+                              className='btn-primary py-2 px-3 text-xs shrink-0'
+                            >
+                              {creatingCat ? '...' : 'Crear'}
+                            </button>
+                            <button
+                              type='button'
+                              onClick={() => setShowNewCatModal(null)}
+                              className='p-2 bg-gray-800 hover:bg-gray-700 text-gray-400 rounded-xl text-xs shrink-0'
+                              title='Cancelar'
+                            >
+                              <X size={14} />
+                            </button>
+                          </div>
+                        ) : (
+                          <select
+                            value={item.categoryId}
+                            onChange={(e) => updateItem(item.id, 'categoryId', e.target.value)}
+                            className='form-input text-sm py-2 sm:py-2.5 bg-gray-800'
+                          >
+                            <option value=''>Sin categoría</option>
+                            {categories.map((cat) => (
+                              <option key={cat.id} value={cat.id}>
+                                {cat.name}
+                              </option>
+                            ))}
+                          </select>
+                        )}
                       </div>
                     </div>
 
-                    {/* Tallas */}
-                    <div>
-                      <p className='text-gray-400 text-xs font-semibold uppercase tracking-wider mb-1.5'>
-                        Tallas disponibles *
-                      </p>
-                      <div className='flex flex-wrap gap-1.5'>
-                        {ALL_SIZES.map((size) => (
-                          <button
-                            key={size}
-                            type='button'
-                            onClick={() => toggleSize(item.id, size)}
-                            className={`size-chip !py-1 !px-2.5 ${
-                              item.sizes.includes(size)
-                                ? 'size-chip-active'
-                                : 'size-chip-inactive'
-                            }`}
-                          >
-                            {size}
-                          </button>
-                        ))}
-                      </div>
-                      {item.sizes.length === 0 && (
-                        <p className='text-red-400/80 text-xs mt-1'>
-                          * Selecciona al menos una talla para publicar
-                        </p>
-                      )}
-                    </div>
+                    {/* Tallas / Medidas / Tamaños */}
+                    <SizeMeasurePicker
+                      selected={item.sizes}
+                      onChange={(newSizes) => updateItem(item.id, 'sizes', newSizes)}
+                    />
                   </>
                 )}
               </div>
@@ -462,6 +547,19 @@ const BatchUpload = ({ onSuccess }) => {
           </div>
         ))}
       </div>
+
+      {/* Modal de Previsualización y Zoom HD */}
+      <ImageZoomModal
+        isOpen={zoomModalItemIndex !== null}
+        onClose={() => setZoomModalItemIndex(null)}
+        images={items.map((it) => ({
+          url: it.previewUrl,
+          name: it.name || 'Prenda en lote',
+          sizeKB: it.compressedSizeKB,
+        }))}
+        initialIndex={zoomModalItemIndex || 0}
+        isAdmin={true}
+      />
     </div>
   )
 }

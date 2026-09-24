@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { ShoppingBag, Check } from 'lucide-react'
+import { ShoppingBag, Check, Flame, Star, ZoomIn } from 'lucide-react'
 import StockBadge from '../shared/StockBadge'
+import ImageZoomModal from '../shared/ImageZoomModal'
 import { useCart } from '../../store/CartContext'
 import { useStore } from '../../store/StoreContext'
 import toast from 'react-hot-toast'
@@ -8,17 +9,26 @@ import toast from 'react-hot-toast'
 const ProductCard = ({ product }) => {
   const { addItem, setIsOpen } = useCart()
   const { settings } = useStore()
-  const [selectedSize, setSelectedSize] = useState(null)
+  const [selectedSize, setSelectedSize] = useState(
+    product?.sizes?.length === 1 ? product.sizes[0] : null
+  )
   const [imgError, setImgError] = useState(false)
   const [highlightSize, setHighlightSize] = useState(false)
+  const [showZoom, setShowZoom] = useState(false)
 
   const currencySymbol = settings?.currency_symbol || '$'
+
+  const hasPromo = product?.is_on_sale && product?.original_price > product?.price
+  const discount = hasPromo
+    ? Math.round(((product.original_price - product.price) / product.original_price) * 100)
+    : 0
+  const savings = hasPromo ? product.original_price - product.price : 0
 
   const handleAddToCart = () => {
     if (!selectedSize) {
       setHighlightSize(true)
       setTimeout(() => setHighlightSize(false), 800)
-      toast.error('Elige una talla para continuar', {
+      toast.error('Elige una talla o medida para continuar', {
         id: `size-required-${product.id}`,
         icon: '📏',
       })
@@ -30,7 +40,7 @@ const ProductCard = ({ product }) => {
       (t) => (
         <div className='flex items-center justify-between gap-3 text-sm'>
           <span>
-            <b>{product.name}</b> (Talla {selectedSize}) agregado
+            <b>{product.name}</b> ({selectedSize}) agregado
           </span>
           <button
             onClick={() => {
@@ -52,8 +62,13 @@ const ProductCard = ({ product }) => {
       className='product-card group flex flex-col bg-gray-900/60 border border-gray-800/80 rounded-2xl overflow-hidden hover:border-brand-500/40 transition-all duration-300'
       id={`product-${product.id}`}
     >
-      {/* Contenedor de Imagen con ratio 4:5 */}
-      <div className='relative overflow-hidden bg-gray-900' style={{ aspectRatio: '4/5' }}>
+      {/* Contenedor de Imagen con ratio 4:5 y Zoom Interactivo al tocar */}
+      <div
+        onClick={() => setShowZoom(true)}
+        className='relative overflow-hidden bg-gray-900 cursor-pointer select-none'
+        style={{ aspectRatio: '4/5' }}
+        title='Toca para ampliar y ver detalles en HD'
+      >
         {!imgError ? (
           <img
             src={product.image_url}
@@ -76,6 +91,34 @@ const ProductCard = ({ product }) => {
         <div className='absolute top-2.5 left-2.5 z-10'>
           <StockBadge status={product.stock_status} />
         </div>
+
+        {/* Badges flotantes en la esquina superior derecha: Oferta y/o Destacado */}
+        <div className='absolute top-2.5 right-2.5 z-10 flex items-center gap-1.5 animate-scale-in'>
+          {hasPromo && (
+            <span className='inline-flex items-center gap-1 bg-gradient-to-r from-pink-500 via-rose-500 to-pink-600 text-white font-bold text-[11px] px-2.5 py-0.5 rounded-full shadow-lg shadow-pink-500/30 uppercase tracking-wider select-none'>
+              <Flame size={12} className='fill-current' />
+              -{discount}% OFF
+            </span>
+          )}
+
+          {product?.is_featured && (
+            <span
+              className='inline-flex items-center gap-1 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 text-gray-950 font-bold text-[10px] px-2 py-0.5 rounded-full shadow-lg shadow-amber-500/25 uppercase tracking-wider select-none'
+              title='Prenda destacada'
+            >
+              <Star size={11} className='fill-current' />
+              <span className={hasPromo ? 'hidden sm:inline' : 'inline'}>Top</span>
+            </span>
+          )}
+        </div>
+
+        {/* Botón flotante para ver en detalle / Zoom estilo Shein */}
+        <div
+          className='absolute bottom-2.5 right-2.5 z-10 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gray-950/70 hover:bg-gray-900 text-gray-300 hover:text-white border border-gray-700/60 backdrop-blur-md flex items-center justify-center shadow-lg transition-transform active:scale-90 opacity-90 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity'
+          title='Ver en detalle / Zoom'
+        >
+          <ZoomIn size={14} />
+        </div>
       </div>
 
       {/* Informacion del producto */}
@@ -84,19 +127,45 @@ const ProductCard = ({ product }) => {
           <h3 className='text-gray-100 font-medium text-sm sm:text-base leading-snug line-clamp-2 group-hover:text-brand-300 transition-colors'>
             {product.name}
           </h3>
-          <div className='flex items-baseline gap-1 mt-1'>
-            <span className='text-brand-400 font-bold text-lg sm:text-xl font-sans tracking-tight'>
+
+          {/* Precios: Antes y Ahora si está en promoción */}
+          <div className='flex items-baseline flex-wrap gap-2 mt-1.5'>
+            <span
+              className={`font-bold text-lg sm:text-xl font-sans tracking-tight tabular-nums ${
+                hasPromo ? 'text-pink-400' : 'text-brand-400'
+              }`}
+            >
               {currencySymbol}{Number(product.price).toLocaleString('es-CO')}
             </span>
+
+            {hasPromo && (
+              <span className='text-gray-500 text-xs sm:text-sm line-through font-normal tabular-nums'>
+                {currencySymbol}{Number(product.original_price).toLocaleString('es-CO')}
+              </span>
+            )}
           </div>
+
+          {hasPromo && (
+            <p className='text-[11px] text-pink-400/90 font-medium mt-0.5'>
+              Ahorras {currencySymbol}{Number(savings).toLocaleString('es-CO')} COP
+            </p>
+          )}
+
+          {/* Micro-tira de Urgencia estilo Shein */}
+          {product.stock_status === 'low_stock' && (
+            <div className='flex items-center gap-1.5 mt-2 py-1 px-2 rounded-lg bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-transparent border border-amber-500/25 text-amber-300 text-[11px] font-semibold'>
+              <Flame size={12} className='text-amber-400 fill-current shrink-0 animate-pulse' />
+              <span>¡Alta demanda! Quedan pocas unidades</span>
+            </div>
+          )}
         </div>
 
-        {/* Selector de tallas */}
+        {/* Selector de tallas o medidas */}
         {product.sizes && product.sizes.length > 0 && (
           <div className={`transition-all duration-300 ${highlightSize ? 'scale-[1.02] bg-brand-500/10 p-1.5 rounded-xl border border-brand-500/40' : ''}`}>
             <div className='flex items-center justify-between mb-1.5'>
               <span className='text-gray-500 text-[11px] uppercase tracking-wider font-semibold'>
-                {selectedSize ? `Talla: ${selectedSize}` : 'Elige tu talla'}
+                {selectedSize ? `Selección: ${selectedSize}` : 'Elige talla o medida'}
               </span>
             </div>
             <div className='flex flex-wrap gap-1.5'>
@@ -107,7 +176,7 @@ const ProductCard = ({ product }) => {
                     key={size}
                     type='button'
                     id={`size-${product.id}-${size}`}
-                    onClick={() => setSelectedSize(isSelected ? null : size)}
+                    onClick={() => setSelectedSize(isSelected && product.sizes.length > 1 ? null : size)}
                     className={`size-chip flex items-center gap-1 ${
                       isSelected ? 'size-chip-active' : 'size-chip-inactive'
                     }`}
@@ -133,10 +202,18 @@ const ProductCard = ({ product }) => {
         >
           <ShoppingBag size={16} className={selectedSize ? 'text-white' : 'text-gray-400'} />
           <span>
-            {selectedSize ? `Agregar • Talla ${selectedSize}` : 'Agregar al carrito'}
+            {selectedSize ? `Agregar • ${selectedSize}` : 'Agregar al carrito'}
           </span>
         </button>
       </div>
+
+      {/* Previsualizador y Zoom interactivo estilo Shein */}
+      <ImageZoomModal
+        isOpen={showZoom}
+        onClose={() => setShowZoom(false)}
+        images={[{ url: product.image_url, name: product.name, product }]}
+        isAdmin={false}
+      />
     </article>
   )
 }
