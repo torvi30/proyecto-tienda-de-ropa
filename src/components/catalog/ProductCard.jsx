@@ -70,7 +70,7 @@ const ProductCard = ({ product }) => {
       }`}
       id={`product-${product.id}`}
     >
-      {/* Contenedor de Imagen con ratio 4:5 y Zoom Interactivo al tocar */}
+      {/* 4:5 Aspect Ratio Image Container with Interactive Zoom Trigger */}
       <div
         onClick={() => setShowZoom(true)}
         className='relative overflow-hidden bg-gray-900 cursor-pointer select-none'
@@ -92,15 +92,15 @@ const ProductCard = ({ product }) => {
           </div>
         )}
 
-        {/* Degradado sutil inferior en la imagen para mayor contraste */}
+        {/* Subtle bottom gradient overlay for contrast */}
         <div className='absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-gray-950/80 to-transparent pointer-events-none' />
 
-        {/* Badge de stock sobre la imagen */}
+        {/* Stock status badge */}
         <div className='absolute top-2.5 left-2.5 z-10'>
           <StockBadge status={product.stock_status} />
         </div>
 
-        {/* Badges flotantes en la esquina superior derecha: Oferta y/o Destacado */}
+        {/* Promotional / Top featured badges */}
         <div className='absolute top-2.5 right-2.5 z-10 flex items-center gap-1.5 animate-scale-in'>
           {hasPromo && (
             <span className='inline-flex items-center gap-1 bg-gradient-to-r from-pink-500 via-rose-500 to-pink-600 text-white font-bold text-[11px] px-2.5 py-0.5 rounded-full shadow-lg shadow-pink-500/30 uppercase tracking-wider select-none'>
@@ -120,7 +120,7 @@ const ProductCard = ({ product }) => {
           )}
         </div>
 
-        {/* Badge inferior de Prenda Seleccionada cuando se escoge una talla */}
+        {/* Selected size indicator badge */}
         {selectedSize && (
           <div className='absolute bottom-2.5 left-2.5 z-10 animate-scale-in'>
             <span className='inline-flex items-center gap-1.5 bg-gradient-to-r from-brand-600 via-purple-600 to-pink-600 text-white font-bold text-xs px-2.5 py-1 rounded-full shadow-xl shadow-brand-500/40 border border-brand-300/80'>
@@ -130,7 +130,7 @@ const ProductCard = ({ product }) => {
           </div>
         )}
 
-        {/* Botón flotante para ver en detalle / Zoom estilo Shein */}
+        {/* Floating HD Zoom trigger button */}
         <div
           className='absolute bottom-2.5 right-2.5 z-10 w-8 h-8 rounded-full bg-gray-950/80 hover:bg-brand-600 text-gray-200 hover:text-white border border-gray-700/80 hover:border-brand-400 backdrop-blur-md flex items-center justify-center shadow-xl transition-all active:scale-90 opacity-90 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity'
           title='Ver en detalle / Zoom HD'

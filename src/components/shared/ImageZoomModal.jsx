@@ -28,11 +28,11 @@ const ImageZoomModal = ({
   const [selectedSize, setSelectedSize] = useState(null)
   const [justAdded, setJustAdded] = useState(false)
 
-  // Modo Lupa Dinámica en Desktop (Magnifier Lens)
+  // Dynamic Magnifier Lens in Desktop
   const [lensActive, setLensActive] = useState(true)
   const [lensPos, setLensPos] = useState({ x: 0, y: 0, active: false })
 
-  // Gestos táctiles en móvil (Pinch to zoom)
+  // Mobile touch gestures (Pinch to zoom)
   const touchStartDistRef = useRef(0)
   const touchStartZoomRef = useRef(1)
 
@@ -44,7 +44,7 @@ const ImageZoomModal = ({
   const containerRef = useRef(null)
   const imgRef = useRef(null)
 
-  // Sincronizar índice inicial cuando se abre y bloquear scroll
+  // Sync initial index when modal opens and lock body scroll
   useEffect(() => {
     if (isOpen) {
       setCurrentIndex(initialIndex)
@@ -115,11 +115,11 @@ const ImageZoomModal = ({
 
   const currentZoom = ZOOM_LEVELS[zoomIndex]
 
-  // Doble click o doble tap para alternar zoom 1x / 2.5x
+  // Double click or double tap to toggle 1x / 2.5x zoom
   const handleToggleZoom = (e) => {
     if (zoomIndex === 0) {
       setZoomIndex(2) // 2.5x zoom
-      // Centrar hacia el punto de click si es posible
+      // Center towards click point if available
       if (containerRef.current && e?.clientX) {
         const rect = containerRef.current.getBoundingClientRect()
         const clickX = e.clientX - rect.left - rect.width / 2
@@ -131,7 +131,7 @@ const ImageZoomModal = ({
     }
   }
 
-  // Soporte de arrastre (Pan) con mouse
+  // Mouse pan/drag handlers
   const handleMouseDown = (e) => {
     if (currentZoom === 1) return
     setIsDragging(true)
@@ -139,7 +139,7 @@ const ImageZoomModal = ({
   }
 
   const handleMouseMove = (e) => {
-    // Si hay zoom activo, manejar pan
+    // When zoomed in, handle dragging/panning
     if (isDragging && currentZoom > 1) {
       const maxOffset = (currentZoom - 1) * 350
       const newX = Math.max(-maxOffset, Math.min(maxOffset, e.clientX - dragStart.x))
@@ -148,7 +148,7 @@ const ImageZoomModal = ({
       return
     }
 
-    // Modo Lupa Dinámica (Magnifier Lens) cuando no hay zoom activo y no se está arrastrando
+    // Dynamic Magnifier Lens mode when zoom is 1x and user is hovering
     if (currentZoom === 1 && lensActive && imgRef.current) {
       const rect = imgRef.current.getBoundingClientRect()
       if (
@@ -176,7 +176,7 @@ const ImageZoomModal = ({
     setIsDragging(false)
   }
 
-  // Soporte de rueda de ratón para zoom fluido
+  // Smooth mouse wheel zoom support
   const handleWheel = (e) => {
     if (e.deltaY < 0) {
       handleZoomIn()
@@ -185,7 +185,7 @@ const ImageZoomModal = ({
     }
   }
 
-  // Gestos táctiles para móvil: Pinch to zoom y arrastre táctil
+  // Touch gesture support: Pinch to zoom and touch pan
   const handleTouchStart = (e) => {
     if (e.touches.length === 2) {
       const dist = Math.hypot(
@@ -229,7 +229,7 @@ const ImageZoomModal = ({
     setIsDragging(false)
   }
 
-  // Acción de compra sin oscurecer la pantalla ni desconectar al usuario
+  // Add to cart action without disruptive drawer popups
   const handleQuickAdd = () => {
     if (!product) return
     const sizeToUse = selectedSize || (product.sizes?.length === 1 ? product.sizes[0] : null)
@@ -238,7 +238,7 @@ const ImageZoomModal = ({
       return
     }
 
-    // Agregar al carrito SIN forzar apertura violenta del drawer
+    // Add to cart without forcing cart drawer open
     addItem(product, sizeToUse || 'Única', false)
     setJustAdded(true)
     toast.success(`"${product.name}" (${sizeToUse || 'Única'}) agregada a tu bolsa`, {
@@ -247,7 +247,7 @@ const ImageZoomModal = ({
     })
   }
 
-  // Ir directo a WhatsApp para comprar esta prenda
+  // Direct WhatsApp checkout for single product
   const handleDirectWhatsApp = () => {
     if (!product) return
     const sizeToUse = selectedSize || (product.sizes?.length === 1 ? product.sizes[0] : null)

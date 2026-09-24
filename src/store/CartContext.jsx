@@ -14,7 +14,7 @@ export const CartProvider = ({ children }) => {
   })
   const [isOpen, setIsOpen] = useState(false)
 
-  // Persistir en localStorage cada vez que cambia el carrito
+  // Persist to localStorage whenever cart items change
   useEffect(() => {
     localStorage.setItem(CART_KEY, JSON.stringify(items))
   }, [items])

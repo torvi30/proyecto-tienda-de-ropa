@@ -10,7 +10,7 @@ const CartDrawer = () => {
     useCart()
   const { settings } = useStore()
 
-  // Bloquear scroll de la página y cerrar con tecla Escape
+  // Lock body scroll and handle Escape key to close drawer
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') setIsOpen(false)
@@ -27,7 +27,7 @@ const CartDrawer = () => {
     }
   }, [isOpen, setIsOpen])
 
-  // Datos de entrega del cliente persistidos en localStorage
+  // Customer delivery information persisted in localStorage
   const [deliveryInfo, setDeliveryInfo] = useState(() => {
     try {
       return (
@@ -69,7 +69,7 @@ const CartDrawer = () => {
 
   return (
     <>
-      {/* Overlay translúcido de lujo */}
+      {/* Translucent luxury backdrop */}
       <div
         className={`fixed inset-0 bg-black/50 z-40 backdrop-blur-sm transition-opacity duration-300 ${
           isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
@@ -78,7 +78,7 @@ const CartDrawer = () => {
         aria-hidden='true'
       />
 
-      {/* Drawer desde la derecha */}
+      {/* Slide-over drawer from right */}
       <div
         className={`fixed top-0 right-0 h-full w-full max-w-md z-50 flex flex-col
           bg-gray-900/98 backdrop-blur-xl border-l border-gray-800 shadow-2xl
@@ -122,7 +122,7 @@ const CartDrawer = () => {
           </div>
         </div>
 
-        {/* Banner de Urgencia / Reserva temporal estilo Shein */}
+        {/* High demand urgency banner */}
         {items.length > 0 && (
           <div className='bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-amber-500/5 border-b border-amber-500/20 px-4 py-2 flex items-center justify-between text-xs text-amber-300 animate-fade-in'>
             <div className='flex items-center gap-1.5'>
@@ -136,7 +136,7 @@ const CartDrawer = () => {
           </div>
         )}
 
-        {/* Items del carrito */}
+        {/* Cart items container */}
         <div className='flex-1 overflow-y-auto p-4 sm:p-5 space-y-3'>
           {items.length === 0 ? (
             <div className='flex flex-col items-center justify-center h-full text-center py-12'>

@@ -1,20 +1,20 @@
 // =============================================================
-// WHATSAPP — Generador de enlaces de checkout
+// WHATSAPP — Checkout Link Generator
 // =============================================================
 
 /**
- * Formatea un precio segun la moneda de la tienda
+ * Formats price according to store currency settings
  */
 export const formatPrice = (price, currencySymbol = '$', currencyCode = 'COP') => {
   return `${currencySymbol}${Number(price).toLocaleString('es-CO')}`
 }
 
 /**
- * Genera el mensaje de WhatsApp con el resumen del carrito y datos de entrega
- * @param {Array} items - Items del carrito [{product, size, quantity}]
- * @param {Object} settings - Configuracion de la tienda
- * @param {Object} [customerInfo] - Datos del cliente {name, phone, city, address, notes}
- * @returns {string} Mensaje formateado
+ * Generates WhatsApp message with cart summary and delivery details
+ * @param {Array} items - Cart items [{product, size, quantity}]
+ * @param {Object} settings - Store settings
+ * @param {Object} [customerInfo] - Customer delivery details {name, phone, city, address, notes}
+ * @returns {string} Formatted order message
  */
 export const buildWhatsAppMessage = (items, settings, customerInfo = null) => {
   const { store_name, currency_symbol, currency_code, welcome_message } = settings
@@ -63,10 +63,10 @@ export const buildWhatsAppMessage = (items, settings, customerInfo = null) => {
 }
 
 /**
- * Abre WhatsApp con el mensaje del pedido
- * @param {Array} items - Items del carrito
- * @param {Object} settings - Configuracion de la tienda
- * @param {Object} [customerInfo] - Datos del cliente
+ * Opens WhatsApp with formatted order message
+ * @param {Array} items - Cart items
+ * @param {Object} settings - Store settings
+ * @param {Object} [customerInfo] - Customer details
  */
 export const openWhatsAppCheckout = (items, settings, customerInfo = null) => {
   const { whatsapp_number } = settings

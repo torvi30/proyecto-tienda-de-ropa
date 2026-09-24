@@ -28,6 +28,7 @@ const useProducts = () => {
             }
           })
         } catch {
+          // Fallback query without orderBy if index or created_at field is missing
           const fallbackSnapshot = await getDocs(collection(db, 'products'))
           fallbackSnapshot.forEach((doc) => {
             const data = doc.data()
@@ -37,14 +38,14 @@ const useProducts = () => {
           })
         }
 
-        // Si la base de datos aún no tiene prendas creadas, mostrar prendas de demostración
+        // If database does not have products yet, load fallback sample products
         if (items.length === 0) {
           setProducts(mockProducts.filter((p) => p.is_visible && p.stock_status !== 'sold_out'))
         } else {
           setProducts(items)
         }
       } catch (err) {
-        console.error('Error al cargar productos de Firestore:', err)
+        console.error('Error loading Firestore products:', err)
         setError(err.message)
         setProducts(mockProducts.filter((p) => p.is_visible && p.stock_status !== 'sold_out'))
       } finally {
