@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { X, Trash2, Plus, Minus, ShoppingBag, MessageCircle, Flame, Clock, MapPin } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { X, Trash2, Plus, Minus, ShoppingBag, MessageCircle, Flame, Clock, MapPin, ArrowLeft } from 'lucide-react'
 import { useCart } from '../../store/CartContext'
 import { useStore } from '../../store/StoreContext'
 import { openWhatsAppCheckout, formatPrice } from '../../lib/whatsapp'
@@ -9,6 +9,23 @@ const CartDrawer = () => {
   const { items, isOpen, setIsOpen, removeItem, updateQuantity, clearCart, totalItems, totalPrice } =
     useCart()
   const { settings } = useStore()
+
+  // Bloquear scroll de la página y cerrar con tecla Escape
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') setIsOpen(false)
+    }
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyDown)
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+      document.body.style.overflow = ''
+    }
+  }, [isOpen, setIsOpen])
 
   // Datos de entrega del cliente persistidos en localStorage
   const [deliveryInfo, setDeliveryInfo] = useState(() => {
@@ -52,13 +69,14 @@ const CartDrawer = () => {
 
   return (
     <>
-      {/* Overlay oscuro */}
-      {isOpen && (
-        <div
-          className='fixed inset-0 bg-black/60 z-40 backdrop-blur-sm animate-fade-in'
-          onClick={() => setIsOpen(false)}
-        />
-      )}
+      {/* Overlay translúcido de lujo */}
+      <div
+        className={`fixed inset-0 bg-black/50 z-40 backdrop-blur-sm transition-opacity duration-300 ${
+          isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        }`}
+        onClick={() => setIsOpen(false)}
+        aria-hidden='true'
+      />
 
       {/* Drawer desde la derecha */}
       <div

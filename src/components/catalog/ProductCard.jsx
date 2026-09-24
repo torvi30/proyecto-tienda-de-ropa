@@ -15,6 +15,7 @@ const ProductCard = ({ product }) => {
   const [imgError, setImgError] = useState(false)
   const [highlightSize, setHighlightSize] = useState(false)
   const [showZoom, setShowZoom] = useState(false)
+  const [justAdded, setJustAdded] = useState(false)
 
   const currencySymbol = settings?.currency_symbol || '$'
 
@@ -35,7 +36,10 @@ const ProductCard = ({ product }) => {
       return
     }
 
-    addItem(product, selectedSize)
+    addItem(product, selectedSize, false)
+    setJustAdded(true)
+    setTimeout(() => setJustAdded(false), 2200)
+
     toast.success(
       (t) => (
         <div className='flex items-center justify-between gap-3 text-sm'>
@@ -47,13 +51,13 @@ const ProductCard = ({ product }) => {
               toast.dismiss(t.id)
               setIsOpen(true)
             }}
-            className='underline text-brand-300 font-bold hover:text-white shrink-0'
+            className='underline text-brand-300 font-bold hover:text-white shrink-0 ml-2'
           >
-            Ver carrito
+            Ver bolsa 🛍️
           </button>
         </div>
       ),
-      { icon: '🛍️', duration: 3500 }
+      { icon: '🛍️', duration: 4000 }
     )
   }
 
@@ -124,7 +128,11 @@ const ProductCard = ({ product }) => {
       {/* Informacion del producto */}
       <div className='flex flex-col flex-1 p-3.5 sm:p-4 gap-3'>
         <div>
-          <h3 className='text-gray-100 font-medium text-sm sm:text-base leading-snug line-clamp-2 group-hover:text-brand-300 transition-colors'>
+          <h3
+            onClick={() => setShowZoom(true)}
+            className='text-gray-100 font-medium text-sm sm:text-base leading-snug line-clamp-2 group-hover:text-brand-300 transition-colors cursor-pointer'
+            title='Toca para ver prenda con zoom HD'
+          >
             {product.name}
           </h3>
 
@@ -195,15 +203,26 @@ const ProductCard = ({ product }) => {
           onClick={handleAddToCart}
           id={`add-to-cart-${product.id}`}
           className={`mt-auto w-full py-2.5 sm:py-3 px-4 rounded-xl text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer ${
-            selectedSize
-              ? 'btn-primary shadow-lg shadow-brand-500/20'
+            justAdded
+              ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/30 scale-[1.02]'
+              : selectedSize
+              ? 'btn-primary shadow-lg shadow-brand-500/20 active:scale-[0.98]'
               : 'bg-gray-800 hover:bg-gray-700/80 text-gray-200 border border-gray-700 active:scale-[0.98]'
           }`}
         >
-          <ShoppingBag size={16} className={selectedSize ? 'text-white' : 'text-gray-400'} />
-          <span>
-            {selectedSize ? `Agregar • ${selectedSize}` : 'Agregar al carrito'}
-          </span>
+          {justAdded ? (
+            <>
+              <Check size={16} className='text-emerald-200 animate-scale-in' />
+              <span className='font-bold'>¡Agregado a tu bolsa!</span>
+            </>
+          ) : (
+            <>
+              <ShoppingBag size={16} className={selectedSize ? 'text-white' : 'text-gray-400'} />
+              <span>
+                {selectedSize ? `Agregar • ${selectedSize}` : 'Agregar al carrito'}
+              </span>
+            </>
+          )}
         </button>
       </div>
 
