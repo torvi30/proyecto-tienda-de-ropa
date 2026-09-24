@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from 'react'
 import {
   Upload, X, CheckCircle, AlertCircle, Loader2,
-  ImagePlus, Zap, ChevronRight, Plus, ZoomIn
+  ImagePlus, Zap, ChevronRight, Plus, ZoomIn, Move
 } from 'lucide-react'
 import useImageCompressor from '../../hooks/useImageCompressor'
 import useCategories from '../../hooks/useCategories'
@@ -343,7 +343,7 @@ const BatchUpload = ({ onSuccess }) => {
                 <div
                   onClick={() => setZoomModalItemIndex(index)}
                   className='relative cursor-pointer group/thumb'
-                  title='Toca para ampliar y revisar detalles en HD'
+                  title='Toca para previsualizar, mover y encuadrar foto'
                 >
                   <div
                     className='w-20 sm:w-24 rounded-xl overflow-hidden bg-gray-700 shadow-md border border-gray-700/60 transition-transform group-hover/thumb:scale-[1.03]'
@@ -354,10 +354,10 @@ const BatchUpload = ({ onSuccess }) => {
                       alt='Preview'
                       className='w-full h-full object-cover'
                     />
-                    {/* Subtle zoom overlay on hover */}
-                    <div className='absolute inset-0 bg-black/40 opacity-0 group-hover/thumb:opacity-100 transition-opacity flex flex-col items-center justify-center text-white gap-0.5 backdrop-blur-[1px]'>
-                      <ZoomIn size={18} />
-                      <span className='text-[10px] font-semibold'>Zoom</span>
+                    {/* Framing / preview overlay */}
+                    <div className='absolute inset-0 bg-black/50 opacity-0 group-hover/thumb:opacity-100 transition-opacity flex flex-col items-center justify-center text-white gap-1 backdrop-blur-[2px]'>
+                      <Move size={16} className='text-brand-300' />
+                      <span className='text-[10px] font-semibold text-gray-100'>Ajustar</span>
                     </div>
                   </div>
                   {/* Compression size badge */}
@@ -548,7 +548,7 @@ const BatchUpload = ({ onSuccess }) => {
         ))}
       </div>
 
-      {/* Full HD Image Inspection and Zoom Modal */}
+      {/* Interactive 4:5 Photo Framing & Preview Modal */}
       <ImageZoomModal
         isOpen={zoomModalItemIndex !== null}
         onClose={() => setZoomModalItemIndex(null)}
@@ -556,9 +556,33 @@ const BatchUpload = ({ onSuccess }) => {
           url: it.previewUrl,
           name: it.name || 'Prenda en lote',
           sizeKB: it.compressedSizeKB,
+          originalFile: it.file,
         }))}
         initialIndex={zoomModalItemIndex || 0}
         isAdmin={true}
+        onApplyFrame={(newBlob, newPreviewUrl, newSizeKB) => {
+          if (zoomModalItemIndex !== null && items[zoomModalItemIndex]) {
+            const targetId = items[zoomModalItemIndex].id
+            // Revoke old blob preview URL to keep browser memory clean
+            if (items[zoomModalItemIndex].previewUrl) {
+              URL.revokeObjectURL(items[zoomModalItemIndex].previewUrl)
+            }
+            setItems((prev) =>
+              prev.map((it) =>
+                it.id === targetId
+                  ? {
+                      ...it,
+                      file: new File([newBlob], it.file?.name || 'prenda.webp', { type: 'image/webp' }),
+                      previewUrl: newPreviewUrl,
+                      compressedSizeKB: newSizeKB,
+                    }
+                  : it
+              )
+            )
+            toast.success('¡Encuadre de foto guardado con éxito!', { icon: '✨' })
+            setZoomModalItemIndex(null)
+          }
+        }}
       />
     </div>
   )

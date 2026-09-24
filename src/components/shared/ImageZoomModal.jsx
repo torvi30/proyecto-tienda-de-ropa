@@ -2,37 +2,32 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import {
   X, ZoomIn, ZoomOut, RotateCcw, ChevronLeft, ChevronRight,
-  Crop, Sparkles, Flame, ShoppingBag, MessageCircle, Check,
-  Search, Move, ArrowRight
+  Sparkles, ShoppingBag, MessageCircle, Check,
+  Move, ArrowRight, CheckCircle2, Sliders
 } from 'lucide-react'
 import { useCart } from '../../store/CartContext'
 import { useStore } from '../../store/StoreContext'
 import { openWhatsAppCheckout, formatPrice } from '../../lib/whatsapp'
 import toast from 'react-hot-toast'
 
-const ZOOM_LEVELS = [1, 1.75, 2.5, 3.5]
-
 const ImageZoomModal = ({
   isOpen,
   onClose,
-  images = [], // Array of objects { url, name, sizeKB, product } or strings
+  images = [], // Array of objects { url, name, sizeKB, product, originalFile } or strings
   initialIndex = 0,
   isAdmin = false,
+  onApplyFrame = null, // Callback (blob, previewUrl, sizeKB) when admin saves framing
 }) => {
   const [currentIndex, setCurrentIndex] = useState(initialIndex)
-  const [zoomIndex, setZoomIndex] = useState(0) // Index in ZOOM_LEVELS
-  const [showCropFrame, setShowCropFrame] = useState(isAdmin) // Default crop guide enabled for admin only
-  const [isDragging, setIsDragging] = useState(false)
+  const [zoom, setZoom] = useState(1)
   const [position, setPosition] = useState({ x: 0, y: 0 })
+  const [isDragging, setIsDragging] = useState(false)
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
   const [selectedSize, setSelectedSize] = useState(null)
   const [justAdded, setJustAdded] = useState(false)
+  const [isApplying, setIsApplying] = useState(false)
 
-  // Dynamic Magnifier Lens in Desktop
-  const [lensActive, setLensActive] = useState(true)
-  const [lensPos, setLensPos] = useState({ x: 0, y: 0, active: false })
-
-  // Mobile touch gestures (Pinch to zoom)
+  // Mobile pinch-to-zoom tracking
   const touchStartDistRef = useRef(0)
   const touchStartZoomRef = useRef(1)
 
@@ -41,14 +36,14 @@ const ImageZoomModal = ({
   const sym = settings?.currency_symbol || '$'
   const code = settings?.currency_code || 'COP'
 
-  const containerRef = useRef(null)
+  const frameRef = useRef(null)
   const imgRef = useRef(null)
 
-  // Sync initial index when modal opens and lock body scroll
+  // Sync initial state on open
   useEffect(() => {
     if (isOpen) {
       setCurrentIndex(initialIndex)
-      setZoomIndex(0)
+      setZoom(1)
       setPosition({ x: 0, y: 0 })
       setSelectedSize(null)
       setJustAdded(false)
@@ -62,35 +57,31 @@ const ImageZoomModal = ({
   }, [isOpen, initialIndex])
 
   const handleZoomIn = useCallback(() => {
-    setZoomIndex((prev) => Math.min(prev + 1, ZOOM_LEVELS.length - 1))
+    setZoom((prev) => Math.min(3.5, Math.round((prev + 0.25) * 100) / 100))
   }, [])
 
   const handleZoomOut = useCallback(() => {
-    setZoomIndex((prev) => {
-      const next = Math.max(prev - 1, 0)
-      if (next === 0) setPosition({ x: 0, y: 0 })
-      return next
-    })
+    setZoom((prev) => Math.max(0.8, Math.round((prev - 0.25) * 100) / 100))
   }, [])
 
-  const resetZoom = useCallback(() => {
-    setZoomIndex(0)
+  const resetView = useCallback(() => {
+    setZoom(1)
     setPosition({ x: 0, y: 0 })
   }, [])
 
   const handlePrev = useCallback(() => {
-    resetZoom()
+    resetView()
     setJustAdded(false)
     setCurrentIndex((prev) => (prev > 0 ? prev - 1 : images.length - 1))
-  }, [images.length, resetZoom])
+  }, [images.length, resetView])
 
   const handleNext = useCallback(() => {
-    resetZoom()
+    resetView()
     setJustAdded(false)
     setCurrentIndex((prev) => (prev < images.length - 1 ? prev + 1 : 0))
-  }, [images.length, resetZoom])
+  }, [images.length, resetView])
 
-  // Keyboard navigation: Escape, left/right arrows, +/- zoom
+  // Keyboard navigation
   useEffect(() => {
     if (!isOpen) return
     const handleKeyDown = (e) => {
@@ -99,11 +90,11 @@ const ImageZoomModal = ({
       if (e.key === 'ArrowRight' && images.length > 1) handleNext()
       if (e.key === '+' || e.key === '=') handleZoomIn()
       if (e.key === '-') handleZoomOut()
-      if (e.key === '0') resetZoom()
+      if (e.key === '0') resetView()
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, images.length, handlePrev, handleNext, handleZoomIn, handleZoomOut, resetZoom, onClose])
+  }, [isOpen, images.length, handlePrev, handleNext, handleZoomIn, handleZoomOut, resetView, onClose])
 
   if (!isOpen || images.length === 0) return null
 
@@ -113,79 +104,33 @@ const ImageZoomModal = ({
   const currentSizeKB = typeof currentItem === 'string' ? null : currentItem.sizeKB
   const product = typeof currentItem === 'object' && currentItem.product ? currentItem.product : null
 
-  const currentZoom = ZOOM_LEVELS[zoomIndex]
-
-  // Double click or double tap to toggle 1x / 2.5x zoom
-  const handleToggleZoom = (e) => {
-    if (zoomIndex === 0) {
-      setZoomIndex(2) // 2.5x zoom
-      // Center towards click point if available
-      if (containerRef.current && e?.clientX) {
-        const rect = containerRef.current.getBoundingClientRect()
-        const clickX = e.clientX - rect.left - rect.width / 2
-        const clickY = e.clientY - rect.top - rect.height / 2
-        setPosition({ x: -clickX * 0.8, y: -clickY * 0.8 })
-      }
-    } else {
-      resetZoom()
-    }
-  }
-
-  // Mouse pan/drag handlers
+  // Mouse pan handlers
   const handleMouseDown = (e) => {
-    if (currentZoom === 1) return
+    e.preventDefault()
     setIsDragging(true)
     setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y })
   }
 
   const handleMouseMove = (e) => {
-    // When zoomed in, handle dragging/panning
-    if (isDragging && currentZoom > 1) {
-      const maxOffset = (currentZoom - 1) * 350
-      const newX = Math.max(-maxOffset, Math.min(maxOffset, e.clientX - dragStart.x))
-      const newY = Math.max(-maxOffset, Math.min(maxOffset, e.clientY - dragStart.y))
-      setPosition({ x: newX, y: newY })
-      return
-    }
-
-    // Dynamic Magnifier Lens mode when zoom is 1x and user is hovering
-    if (currentZoom === 1 && lensActive && imgRef.current) {
-      const rect = imgRef.current.getBoundingClientRect()
-      if (
-        e.clientX >= rect.left &&
-        e.clientX <= rect.right &&
-        e.clientY >= rect.top &&
-        e.clientY <= rect.bottom
-      ) {
-        const xPercent = ((e.clientX - rect.left) / rect.width) * 100
-        const yPercent = ((e.clientY - rect.top) / rect.height) * 100
-        setLensPos({
-          x: e.clientX,
-          y: e.clientY,
-          xPercent,
-          yPercent,
-          active: true,
-        })
-      } else {
-        setLensPos((prev) => ({ ...prev, active: false }))
-      }
-    }
+    if (!isDragging) return
+    setPosition({
+      x: e.clientX - dragStart.x,
+      y: e.clientY - dragStart.y,
+    })
   }
 
   const handleMouseUp = () => {
     setIsDragging(false)
   }
 
-  // Smooth mouse wheel zoom support
+  // Wheel zoom
   const handleWheel = (e) => {
-    if (e.deltaY < 0) {
-      handleZoomIn()
-    } else if (e.deltaY > 0) {
-      handleZoomOut()
-    }
+    e.preventDefault()
+    const delta = e.deltaY < 0 ? 0.15 : -0.15
+    setZoom((prev) => Math.min(3.5, Math.max(0.8, Math.round((prev + delta) * 100) / 100)))
   }
 
-  // Touch gesture support: Pinch to zoom and touch pan
+  // Touch gesture support: pan and pinch-to-zoom
   const handleTouchStart = (e) => {
     if (e.touches.length === 2) {
       const dist = Math.hypot(
@@ -193,8 +138,8 @@ const ImageZoomModal = ({
         e.touches[0].clientY - e.touches[1].clientY
       )
       touchStartDistRef.current = dist
-      touchStartZoomRef.current = currentZoom
-    } else if (e.touches.length === 1 && currentZoom > 1) {
+      touchStartZoomRef.current = zoom
+    } else if (e.touches.length === 1) {
       setIsDragging(true)
       setDragStart({
         x: e.touches[0].clientX - position.x,
@@ -204,32 +149,100 @@ const ImageZoomModal = ({
   }
 
   const handleTouchMove = (e) => {
-    if (e.touches.length === 2) {
+    if (e.touches.length === 2 && touchStartDistRef.current > 0) {
       const dist = Math.hypot(
         e.touches[0].clientX - e.touches[1].clientX,
         e.touches[0].clientY - e.touches[1].clientY
       )
-      const ratio = dist / (touchStartDistRef.current || 1)
-      if (ratio > 1.3 && zoomIndex < ZOOM_LEVELS.length - 1) {
-        setZoomIndex(Math.min(zoomIndex + 1, ZOOM_LEVELS.length - 1))
-        touchStartDistRef.current = dist
-      } else if (ratio < 0.75 && zoomIndex > 0) {
-        setZoomIndex(Math.max(zoomIndex - 1, 0))
-        touchStartDistRef.current = dist
-      }
-    } else if (e.touches.length === 1 && isDragging && currentZoom > 1) {
-      const maxOffset = (currentZoom - 1) * 350
-      const newX = Math.max(-maxOffset, Math.min(maxOffset, e.touches[0].clientX - dragStart.x))
-      const newY = Math.max(-maxOffset, Math.min(maxOffset, e.touches[0].clientY - dragStart.y))
-      setPosition({ x: newX, y: newY })
+      const ratio = dist / touchStartDistRef.current
+      const nextZoom = Math.min(3.5, Math.max(0.8, touchStartZoomRef.current * ratio))
+      setZoom(Math.round(nextZoom * 100) / 100)
+    } else if (e.touches.length === 1 && isDragging) {
+      setPosition({
+        x: e.touches[0].clientX - dragStart.x,
+        y: e.touches[0].clientY - dragStart.y,
+      })
     }
   }
 
   const handleTouchEnd = () => {
     setIsDragging(false)
+    touchStartDistRef.current = 0
   }
 
-  // Add to cart action without disruptive drawer popups
+  // Double click / tap to toggle zoom
+  const handleDoubleClick = () => {
+    if (zoom === 1) {
+      setZoom(1.8)
+    } else {
+      resetView()
+    }
+  }
+
+  // Export current visual framing to a new 1080x1350 WebP Blob
+  const handleSaveFraming = async () => {
+    if (!onApplyFrame) return
+    setIsApplying(true)
+    try {
+      const img = new Image()
+      img.crossOrigin = 'anonymous'
+      img.src = currentUrl
+
+      await new Promise((resolve, reject) => {
+        if (img.complete) return resolve()
+        img.onload = resolve
+        img.onerror = reject
+      })
+
+      const canvas = document.createElement('canvas')
+      canvas.width = 1080
+      canvas.height = 1350
+      const ctx = canvas.getContext('2d')
+
+      const frameEl = frameRef.current
+      const frameRect = frameEl ? frameEl.getBoundingClientRect() : { width: 360, height: 450 }
+      const k = 1080 / frameRect.width
+
+      const imgRatio = img.naturalWidth / img.naturalHeight
+      const targetRatio = 1080 / 1350
+
+      let baseW, baseH
+      if (imgRatio > targetRatio) {
+        baseH = 1350
+        baseW = 1350 * imgRatio
+      } else {
+        baseW = 1080
+        baseH = 1080 / imgRatio
+      }
+
+      const drawW = baseW * zoom
+      const drawH = baseH * zoom
+      const drawX = (1080 - drawW) / 2 + (position.x * k)
+      const drawY = (1350 - drawH) / 2 + (position.y * k)
+
+      ctx.fillStyle = '#0a0a0f'
+      ctx.fillRect(0, 0, 1080, 1350)
+      ctx.drawImage(img, drawX, drawY, drawW, drawH)
+
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          toast.error('Error al generar la imagen encuadrada')
+          setIsApplying(false)
+          return
+        }
+        const newUrl = URL.createObjectURL(blob)
+        const sizeKB = Math.round(blob.size / 1024)
+        onApplyFrame(blob, newUrl, sizeKB)
+        setIsApplying(false)
+      }, 'image/webp', 0.85)
+    } catch (err) {
+      console.error('Error applying frame:', err)
+      toast.error('No se pudo aplicar el encuadre')
+      setIsApplying(false)
+    }
+  }
+
+  // Customer: Add to cart
   const handleQuickAdd = () => {
     if (!product) return
     const sizeToUse = selectedSize || (product.sizes?.length === 1 ? product.sizes[0] : null)
@@ -238,7 +251,6 @@ const ImageZoomModal = ({
       return
     }
 
-    // Add to cart without forcing cart drawer open
     addItem(product, sizeToUse || 'Única', false)
     setJustAdded(true)
     toast.success(`"${product.name}" (${sizeToUse || 'Única'}) agregada a tu bolsa`, {
@@ -247,7 +259,7 @@ const ImageZoomModal = ({
     })
   }
 
-  // Direct WhatsApp checkout for single product
+  // Customer: Direct WhatsApp checkout
   const handleDirectWhatsApp = () => {
     if (!product) return
     const sizeToUse = selectedSize || (product.sizes?.length === 1 ? product.sizes[0] : null)
@@ -264,17 +276,16 @@ const ImageZoomModal = ({
       className='fixed inset-0 z-[9999] flex flex-col bg-gray-950/95 backdrop-blur-2xl text-gray-100 select-none animate-fade-in'
       onClick={onClose}
     >
-      {/* 1. Top Luxury Control Header */}
+      {/* 1. Header Toolbar */}
       <header
-        className='relative z-30 flex items-center justify-between px-3 sm:px-6 py-3 bg-gray-950/80 border-b border-gray-800/80 backdrop-blur-md'
+        className='relative z-30 flex items-center justify-between px-3.5 sm:px-6 py-3 bg-gray-950/90 border-b border-gray-800/80 backdrop-blur-md'
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Left side: Title and image counter */}
+        {/* Title and metadata */}
         <div className='flex items-center gap-2.5 min-w-0'>
           <div className='flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-500/15 border border-brand-500/30 text-brand-300 text-xs font-semibold shrink-0'>
             <Sparkles size={13} className='text-brand-400' />
-            <span className='hidden sm:inline'>Detalle en Alta Definición</span>
-            <span className='sm:hidden'>Zoom HD</span>
+            <span>{isAdmin ? 'Vista Previa & Encuadre 4:5' : 'Vista Previa en HD'}</span>
           </div>
 
           {images.length > 1 && (
@@ -290,352 +301,222 @@ const ImageZoomModal = ({
           )}
         </div>
 
-        {/* Right side: Zoom tools and close button */}
-        <div className='flex items-center gap-1.5 sm:gap-2 shrink-0'>
-          {/* Toggle lens magnifier mode (desktop only, non-admin) */}
-          {!isAdmin && (
+        {/* Header Right Actions */}
+        <div className='flex items-center gap-2 shrink-0'>
+          {/* Apply frame button for admin */}
+          {isAdmin && onApplyFrame && (
             <button
               type='button'
-              onClick={() => {
-                setLensActive(!lensActive)
-                resetZoom()
-              }}
-              title={lensActive ? 'Desactivar lupa flotante' : 'Activar lupa flotante'}
-              className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium border transition-colors ${
-                lensActive
-                  ? 'bg-brand-600/20 border-brand-500/40 text-brand-300 shadow-sm'
-                  : 'bg-gray-900 border-gray-800 text-gray-400 hover:text-gray-200'
-              }`}
+              onClick={handleSaveFraming}
+              disabled={isApplying}
+              className='px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-brand-600 to-purple-600 hover:from-brand-500 hover:to-purple-500 text-white text-xs font-bold shadow-md shadow-brand-500/25 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer'
             >
-              <Search size={14} />
-              <span>Modo Lupa</span>
+              <Check size={14} />
+              <span>{isApplying ? 'Guardando...' : 'Aplicar Encuadre'}</span>
             </button>
           )}
 
-          {/* 4:5 Catalog crop guide (Admin mode only) */}
-          {isAdmin && (
-            <button
-              type='button'
-              onClick={() => setShowCropFrame(!showCropFrame)}
-              title='Alternar simulador de encuadre 4:5'
-              className={`p-2 rounded-xl text-xs font-medium flex items-center gap-1.5 transition-colors border ${
-                showCropFrame
-                  ? 'bg-brand-600/20 border-brand-500/40 text-brand-300'
-                  : 'bg-gray-900 border-gray-800 text-gray-400 hover:text-gray-200'
-              }`}
-            >
-              <Crop size={15} />
-              <span className='hidden md:inline'>Marco 4:5</span>
-            </button>
-          )}
-
-          {/* Zoom controls group */}
-          <div className='flex items-center bg-gray-900 border border-gray-800 rounded-xl p-0.5 shadow-inner'>
-            <button
-              type='button'
-              onClick={handleZoomOut}
-              disabled={zoomIndex === 0}
-              title='Alejar (-)'
-              className='p-1.5 text-gray-400 hover:text-white disabled:opacity-25 disabled:hover:text-gray-400 transition-colors rounded-lg active:scale-95'
-            >
-              <ZoomOut size={16} />
-            </button>
-
-            <button
-              type='button'
-              onClick={resetZoom}
-              title='Restablecer 100%'
-              className='px-2 py-0.5 text-xs font-semibold font-mono text-brand-300 hover:text-brand-200 transition-colors select-none'
-            >
-              {Math.round(currentZoom * 100)}%
-            </button>
-
-            <button
-              type='button'
-              onClick={handleZoomIn}
-              disabled={zoomIndex === ZOOM_LEVELS.length - 1}
-              title='Acercar (+)'
-              className='p-1.5 text-gray-400 hover:text-white disabled:opacity-25 disabled:hover:text-gray-400 transition-colors rounded-lg active:scale-95'
-            >
-              <ZoomIn size={16} />
-            </button>
-
-            {currentZoom > 1 && (
-              <button
-                type='button'
-                onClick={resetZoom}
-                title='Restablecer vista original'
-                className='p-1.5 text-gray-400 hover:text-white border-l border-gray-800 transition-colors'
-              >
-                <RotateCcw size={13} />
-              </button>
-            )}
-          </div>
-
-          {/* Prominent close button */}
+          {/* Close button */}
           <button
             type='button'
             onClick={onClose}
             title='Cerrar (Esc)'
-            aria-label='Cerrar visor de zoom'
-            className='p-2 rounded-xl bg-gray-900 hover:bg-red-500/20 border border-gray-800 hover:border-red-500/40 text-gray-300 hover:text-red-300 transition-all ml-1 active:scale-90 flex items-center justify-center'
+            aria-label='Cerrar vista previa'
+            className='p-2 rounded-xl bg-gray-900 hover:bg-red-500/20 border border-gray-800 hover:border-red-500/40 text-gray-300 hover:text-red-300 transition-all active:scale-90 flex items-center justify-center cursor-pointer'
           >
             <X size={18} />
           </button>
         </div>
       </header>
 
-      {/* 2. Central Ultra-HD Viewport Area */}
+      {/* 2. Main Central Viewport: 4:5 Framing Area */}
       <main
-        ref={containerRef}
-        className='relative flex-1 flex items-center justify-center overflow-hidden p-2 sm:p-6 select-none touch-none'
-        onMouseDown={handleMouseDown}
+        className='relative flex-1 flex flex-col items-center justify-center p-3 sm:p-6 overflow-hidden select-none'
+        onClick={(e) => e.stopPropagation()}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
-        onMouseLeave={() => {
-          setIsDragging(false)
-          setLensPos((prev) => ({ ...prev, active: false }))
-        }}
-        onWheel={handleWheel}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        style={{ cursor: currentZoom > 1 ? (isDragging ? 'grabbing' : 'grab') : 'crosshair' }}
-        onClick={(e) => e.stopPropagation()}
       >
-        {/* Garment container */}
+        {/* Navigation arrows if multiple images */}
+        {images.length > 1 && (
+          <>
+            <button
+              type='button'
+              onClick={handlePrev}
+              className='absolute left-2 sm:left-6 z-20 p-2.5 sm:p-3 rounded-full bg-gray-900/80 hover:bg-gray-800 border border-gray-700/60 text-white shadow-xl backdrop-blur-md transition-all active:scale-90 cursor-pointer'
+              title='Anterior'
+            >
+              <ChevronLeft size={20} />
+            </button>
+            <button
+              type='button'
+              onClick={handleNext}
+              className='absolute right-2 sm:right-6 z-20 p-2.5 sm:p-3 rounded-full bg-gray-900/80 hover:bg-gray-800 border border-gray-700/60 text-white shadow-xl backdrop-blur-md transition-all active:scale-90 cursor-pointer'
+              title='Siguiente'
+            >
+              <ChevronRight size={20} />
+            </button>
+          </>
+        )}
+
+        {/* 4:5 Boutique Frame Container */}
         <div
-          className={`relative flex items-center justify-center transition-all duration-200 ${
-            showCropFrame && isAdmin
-              ? 'border-2 border-brand-500/40 rounded-3xl shadow-2xl shadow-brand-500/10 overflow-hidden'
-              : ''
-          }`}
-          style={{
-            maxHeight: 'min(74vh, 720px)',
-            maxWidth: '100%',
-            aspectRatio: showCropFrame && isAdmin ? '4/5' : 'auto',
-          }}
-          onDoubleClick={handleToggleZoom}
+          ref={frameRef}
+          onMouseDown={handleMouseDown}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          onWheel={handleWheel}
+          onDoubleClick={handleDoubleClick}
+          className='relative w-full max-w-[320px] xs:max-w-[360px] sm:max-w-[400px] md:max-w-[420px] aspect-[4/5] rounded-3xl overflow-hidden border-2 border-brand-500/50 shadow-2xl shadow-brand-500/20 bg-gray-950 flex items-center justify-center select-none touch-none ring-1 ring-white/10 cursor-grab active:cursor-grabbing'
+          style={{ maxHeight: 'calc(100vh - 210px)' }}
+          title='Arrastra con el mouse o dedo para mover la foto · Usa la rueda o el control inferior para acercar o alejar'
         >
-          {/* Main image element */}
+          {/* Framed Image */}
           <img
             ref={imgRef}
             src={currentUrl}
-            alt={currentName || 'Prenda en detalle'}
+            alt={currentName || 'Prenda'}
             draggable={false}
-            className='max-h-[72vh] max-w-full w-auto object-contain rounded-2xl sm:rounded-3xl shadow-2xl select-none transition-transform duration-100 ease-out pointer-events-none'
+            className='w-full h-full object-cover select-none pointer-events-none transition-transform duration-75 will-change-transform'
             style={{
-              transform: `scale(${currentZoom}) translate(${position.x / currentZoom}px, ${position.y / currentZoom}px)`,
+              transform: `translate(${position.x}px, ${position.y}px) scale(${zoom})`,
               transformOrigin: 'center center',
             }}
           />
 
-          {/* Floating Precision Magnifier Lens (Shein / Farfetch luxury effect) */}
-          {currentZoom === 1 && lensActive && lensPos.active && (
-            <div
-              className='pointer-events-none fixed z-40 w-44 h-44 sm:w-56 sm:h-56 rounded-full border-2 border-brand-400 shadow-2xl shadow-brand-500/40 overflow-hidden bg-gray-950 animate-scale-in ring-4 ring-black/40'
-              style={{
-                left: lensPos.x - (typeof window !== 'undefined' && window.innerWidth < 640 ? 88 : 112),
-                top: lensPos.y - (typeof window !== 'undefined' && window.innerWidth < 640 ? 88 : 112),
-                backgroundImage: `url(${currentUrl})`,
-                backgroundRepeat: 'no-repeat',
-                backgroundSize: '350%',
-                backgroundPosition: `${lensPos.xPercent}% ${lensPos.yPercent}%`,
-              }}
-            >
-              {/* Precision reticle crosshair */}
-              <div className='absolute inset-0 flex items-center justify-center opacity-30'>
-                <div className='w-full h-[1px] bg-brand-400' />
-                <div className='h-full w-[1px] bg-brand-400 absolute' />
-              </div>
-              <span className='absolute bottom-2 right-2 bg-gray-950/80 px-2 py-0.5 rounded-full text-[10px] font-mono text-brand-300 font-bold border border-brand-500/30'>
-                3.5x HD
-              </span>
-            </div>
-          )}
+          {/* Composition grid lines (Rule of thirds guide for fashion photo framing) */}
+          <div className='absolute inset-0 pointer-events-none grid grid-cols-3 grid-rows-3 opacity-20'>
+            <div className='border-r border-b border-brand-300' />
+            <div className='border-r border-b border-brand-300' />
+            <div className='border-b border-brand-300' />
+            <div className='border-r border-b border-brand-300' />
+            <div className='border-r border-b border-brand-300' />
+            <div className='border-b border-brand-300' />
+            <div className='border-r border-brand-300' />
+            <div className='border-r border-brand-300' />
+            <div />
+          </div>
 
-          {/* Aspect ratio crop frame markers for admin */}
-          {showCropFrame && isAdmin && (
-            <>
-              <div className='absolute top-3 left-3 bg-gray-950/80 border border-brand-500/30 text-brand-300 text-[10px] font-bold px-2 py-0.5 rounded-full pointer-events-none'>
-                Ratio 4:5 Catálogo
-              </div>
-              <div className='absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-brand-400 pointer-events-none' />
-              <div className='absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-brand-400 pointer-events-none' />
-              <div className='absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-brand-400 pointer-events-none' />
-              <div className='absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-brand-400 pointer-events-none' />
-            </>
-          )}
+          {/* Floating frame cues */}
+          <div className='absolute top-3 left-3 bg-gray-950/80 backdrop-blur-md border border-gray-700/80 rounded-full px-2.5 py-1 text-[11px] font-medium text-gray-200 flex items-center gap-1.5 shadow-md pointer-events-none'>
+            <Sparkles size={12} className='text-brand-400' />
+            <span>Formato 4:5 Catálogo</span>
+          </div>
 
-          {/* Fullscreen touch and gesture hint */}
-          {currentZoom === 1 && !lensPos.active && (
-            <div className='absolute bottom-3 bg-gray-950/80 border border-gray-800 text-gray-300 text-[11px] px-3.5 py-1.5 rounded-full pointer-events-none backdrop-blur-md flex items-center gap-2 shadow-lg'>
-              <Move size={12} className='text-brand-400' />
-              <span>Doble toque o clic para zoom profundo · Arrastra para explorar la tela</span>
-            </div>
-          )}
+          <div className='absolute top-3 right-3 bg-gray-950/80 backdrop-blur-md border border-gray-700/80 rounded-full px-2.5 py-1 text-[11px] font-medium text-brand-300 flex items-center gap-1.5 shadow-md pointer-events-none'>
+            <Move size={12} />
+            <span>Mover foto</span>
+          </div>
         </div>
-
-        {/* Previous image arrow button */}
-        {images.length > 1 && (
-          <button
-            type='button'
-            onClick={(e) => {
-              e.stopPropagation()
-              handlePrev()
-            }}
-            title='Prenda anterior (←)'
-            className='absolute left-2 sm:left-6 top-1/2 -translate-y-1/2 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gray-900/80 hover:bg-gray-800 border border-gray-800 hover:border-brand-500/40 text-gray-200 flex items-center justify-center shadow-2xl backdrop-blur-md transition-all active:scale-90 z-20'
-          >
-            <ChevronLeft size={22} />
-          </button>
-        )}
-
-        {/* Next image arrow button */}
-        {images.length > 1 && (
-          <button
-            type='button'
-            onClick={(e) => {
-              e.stopPropagation()
-              handleNext()
-            }}
-            title='Prenda siguiente (→)'
-            className='absolute right-2 sm:right-6 top-1/2 -translate-y-1/2 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gray-900/80 hover:bg-gray-800 border border-gray-800 hover:border-brand-500/40 text-gray-200 flex items-center justify-center shadow-2xl backdrop-blur-md transition-all active:scale-90 z-20'
-          >
-            <ChevronRight size={22} />
-          </button>
-        )}
       </main>
 
-      {/* 3. Luxury Bottom Bar: Details & Assisted Checkout */}
+      {/* 3. Bottom Interactive Framing & Zoom Controls */}
       <footer
-        className='relative z-30 bg-gray-950/95 border-t border-gray-800/80 px-3 sm:px-6 py-3 backdrop-blur-xl'
+        className='relative z-30 bg-gray-950/90 border-t border-gray-800/80 backdrop-blur-md px-3.5 sm:px-6 py-3.5'
         onClick={(e) => e.stopPropagation()}
       >
-        <div className='max-w-4xl mx-auto'>
-          {product ? (
-            <div className='flex flex-col sm:flex-row items-center justify-between gap-3'>
-              {/* Product title and pricing */}
-              <div className='flex items-center justify-between w-full sm:w-auto gap-3'>
-                <div>
-                  <h4 className='text-gray-100 font-semibold text-sm sm:text-base leading-tight'>
-                    {product.name}
-                  </h4>
-                  <div className='flex items-center gap-2 mt-1'>
-                    <span className='text-brand-400 font-bold text-base sm:text-lg tabular-nums'>
-                      {formatPrice(product.price, sym, code)}
-                    </span>
-                    {product.is_on_sale && product.original_price > product.price && (
-                      <span className='text-gray-500 text-xs line-through tabular-nums'>
-                        {formatPrice(product.original_price, sym, code)}
-                      </span>
-                    )}
-                    {product.is_on_sale && (
-                      <span className='text-[10px] font-bold text-pink-400 bg-pink-500/15 border border-pink-500/30 px-1.5 py-0.2 rounded-full'>
-                        OFERTA
-                      </span>
-                    )}
-                    {product.stock_status === 'low_stock' && (
-                      <span className='text-[10px] font-bold text-amber-300 bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded-full flex items-center gap-1 animate-pulse'>
-                        <Flame size={10} className='fill-current text-amber-400' />
-                        ¡Casi agotado!
-                      </span>
-                    )}
-                  </div>
+        <div className='max-w-xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3'>
+          {/* Zoom Slider and - / + Controls */}
+          <div className='flex items-center gap-3 w-full sm:w-auto justify-center bg-gray-900/90 border border-gray-800 rounded-2xl px-4 py-2 shadow-inner'>
+            {/* Zoom Out Button */}
+            <button
+              type='button'
+              onClick={handleZoomOut}
+              disabled={zoom <= 0.8}
+              title='Alejar (-)'
+              className='p-1.5 text-gray-300 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all active:scale-90 cursor-pointer'
+            >
+              <ZoomOut size={16} />
+            </button>
+
+            {/* Continuous Smooth Zoom Slider */}
+            <input
+              type='range'
+              min='0.8'
+              max='3'
+              step='0.05'
+              value={zoom}
+              onChange={(e) => setZoom(parseFloat(e.target.value))}
+              aria-label='Nivel de zoom de la foto'
+              className='w-28 xs:w-36 sm:w-44 accent-brand-500 cursor-pointer h-1.5 bg-gray-800 rounded-lg'
+            />
+
+            {/* Zoom In Button */}
+            <button
+              type='button'
+              onClick={handleZoomIn}
+              disabled={zoom >= 3.5}
+              title='Acercar (+)'
+              className='p-1.5 text-gray-300 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all active:scale-90 cursor-pointer'
+            >
+              <ZoomIn size={16} />
+            </button>
+
+            {/* Current Zoom Percentage Pill */}
+            <span className='min-w-[48px] text-center font-mono text-xs font-bold text-brand-300 bg-brand-500/15 border border-brand-500/30 px-2 py-0.5 rounded-lg'>
+              {Math.round(zoom * 100)}%
+            </span>
+
+            {/* Reset View Button */}
+            {(zoom !== 1 || position.x !== 0 || position.y !== 0) && (
+              <button
+                type='button'
+                onClick={resetView}
+                title='Restablecer posición y zoom original'
+                className='text-xs text-gray-400 hover:text-white flex items-center gap-1 pl-1 border-l border-gray-700/80 transition-colors cursor-pointer'
+              >
+                <RotateCcw size={13} />
+                <span className='hidden xs:inline'>Centrar</span>
+              </button>
+            )}
+          </div>
+
+          {/* Customer Purchasing Controls (when modal opened from public catalog) */}
+          {!isAdmin && product ? (
+            <div className='flex items-center gap-2 w-full sm:w-auto justify-end'>
+              {product.price && (
+                <span className='text-sm font-bold text-brand-300 mr-2 font-sans'>
+                  {formatPrice(product.price, sym)}
+                </span>
+              )}
+
+              {justAdded ? (
+                <button
+                  type='button'
+                  onClick={() => {
+                    onClose()
+                    setCartOpen(true)
+                  }}
+                  className='btn-primary py-2 px-3 text-xs font-semibold flex items-center gap-1.5'
+                >
+                  <ShoppingBag size={14} />
+                  <span>Ver Bolsa</span>
+                </button>
+              ) : (
+                <div className='flex items-center gap-2'>
+                  <button
+                    type='button'
+                    onClick={handleQuickAdd}
+                    className='btn-primary py-2 px-3.5 text-xs font-semibold flex items-center gap-1.5 cursor-pointer active:scale-95'
+                  >
+                    <ShoppingBag size={14} />
+                    <span>Añadir</span>
+                  </button>
+                  <button
+                    type='button'
+                    onClick={handleDirectWhatsApp}
+                    title='Pedir por WhatsApp'
+                    className='p-2 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 transition-colors active:scale-95 cursor-pointer'
+                  >
+                    <MessageCircle size={16} />
+                  </button>
                 </div>
-              </div>
-
-              {/* Size selector and direct add-to-bag action */}
-              <div className='flex items-center flex-wrap gap-2 w-full sm:w-auto justify-end'>
-                {product.sizes && product.sizes.length > 0 && (
-                  <div className='flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1'>
-                    {product.sizes.map((sz) => {
-                      const isSelected = selectedSize === sz
-                      return (
-                        <button
-                          key={sz}
-                          type='button'
-                          onClick={() => setSelectedSize(sz)}
-                          className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer select-none active:scale-95 ${
-                            isSelected
-                              ? 'bg-gradient-to-r from-brand-600 via-purple-600 to-brand-500 text-white border-brand-300 shadow-xl shadow-brand-500/40 scale-105 ring-2 ring-brand-400/50'
-                              : 'bg-gray-900 border-gray-800 text-gray-300 hover:text-white hover:border-brand-500/50'
-                          }`}
-                        >
-                          <span>{sz}</span>
-                          {isSelected && <Check size={12} className='text-white stroke-[3]' />}
-                        </button>
-                      )
-                    })}
-                  </div>
-                )}
-
-                {/* Post-add options: Open bag drawer or continue browsing */}
-                {justAdded ? (
-                  <div className='flex items-center gap-2 animate-scale-in'>
-                    <button
-                      type='button'
-                      onClick={() => {
-                        onClose()
-                        setCartOpen(true)
-                      }}
-                      className='flex items-center gap-1.5 bg-gradient-to-r from-brand-600 to-purple-600 hover:from-brand-500 hover:to-purple-500 text-white font-bold py-2 px-3.5 rounded-xl text-xs shadow-lg shadow-brand-500/25 active:scale-95 transition-all'
-                    >
-                      <ShoppingBag size={14} />
-                      <span>Ver mi bolsa</span>
-                      <ArrowRight size={13} />
-                    </button>
-                    <button
-                      type='button'
-                      onClick={onClose}
-                      className='py-2 px-3 rounded-xl bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-300 text-xs font-medium'
-                    >
-                      Seguir explorando
-                    </button>
-                  </div>
-                ) : (
-                  <div className='flex items-center gap-2'>
-                    <button
-                      type='button'
-                      onClick={handleQuickAdd}
-                      className='btn-primary py-2 px-4 text-xs font-semibold flex items-center justify-center gap-2 shadow-lg shadow-brand-500/20 active:scale-95'
-                    >
-                      <ShoppingBag size={14} />
-                      <span>{selectedSize ? `Añadir • ${selectedSize}` : 'Añadir a la bolsa'}</span>
-                    </button>
-
-                    <button
-                      type='button'
-                      onClick={handleDirectWhatsApp}
-                      title='Pedir directo por WhatsApp'
-                      className='p-2 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 transition-colors active:scale-95'
-                    >
-                      <MessageCircle size={16} />
-                    </button>
-                  </div>
-                )}
-              </div>
+              )}
             </div>
           ) : (
-            /* Vista de Subida / Admin: Ficha técnica de compresión WebP */
-            <div className='flex items-center justify-between w-full text-xs text-gray-400'>
-              <div className='flex items-center gap-3'>
-                <span className='flex items-center gap-1.5 text-emerald-400 font-semibold'>
-                  <span className='w-2 h-2 rounded-full bg-emerald-400 animate-pulse' />
-                  Formato WebP Optimizado
-                </span>
-                {currentSizeKB && (
-                  <span className='bg-gray-900 border border-gray-800 px-2.5 py-1 rounded-lg text-gray-300 font-mono'>
-                    {currentSizeKB} KB
-                  </span>
-                )}
-                <span className='hidden sm:inline text-gray-500'>
-                  Resolución 1080×1350 px (4:5)
-                </span>
-              </div>
-              <div className='text-gray-500 text-[11px]'>
-                ✨ Máxima nitidez para catálogo móvil
-              </div>
+            /* Admin Mode Info & Help Tag */
+            <div className='text-center sm:text-right text-[11px] text-gray-400'>
+              <span className='text-gray-300 font-medium'>Tip:</span> Arrastra la foto con el dedo o ratón para centrar la prenda
             </div>
           )}
         </div>
