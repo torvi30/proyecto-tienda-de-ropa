@@ -42,8 +42,8 @@ const AdminPage = () => {
         productCount={products?.length || 0}
       />
 
-      {/* Tab content view router */}
-      <main className='page-container py-8'>
+      {/* Tab content view router with mobile bottom clearance */}
+      <main className='page-container pt-5 pb-28 md:py-8'>
         {activeTab === 'metrics' && (
           <AdminMetrics onNavigateTab={setActiveTab} />
         )}
