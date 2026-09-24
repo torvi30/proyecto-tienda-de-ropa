@@ -117,8 +117,8 @@ const AdminNavbar = ({
           </div>
         </div>
 
-        {/* Secondary mobile tab navigation row */}
-        <div className='md:hidden flex items-center justify-around gap-1 pb-3 pt-1 border-t border-gray-800/60'>
+        {/* Secondary mobile tab navigation row with horizontal smooth scrolling */}
+        <div className='md:hidden overflow-x-auto no-scrollbar -mx-4 px-4 py-2 border-t border-gray-800/60 flex items-center gap-2 scroll-smooth'>
           {TABS.map(({ id, label, icon: Icon }) => {
             const isActive = activeTab === id
             return (
@@ -126,16 +126,20 @@ const AdminNavbar = ({
                 key={id}
                 id={`admin-nav-tab-mobile-${id}`}
                 onClick={() => onTabChange(id)}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-xl text-xs font-semibold transition-all ${
+                className={`shrink-0 flex items-center gap-1.5 py-2 px-3.5 rounded-xl text-xs font-semibold transition-all select-none active:scale-95 ${
                   isActive
-                    ? 'bg-brand-600 text-white shadow-md shadow-brand-600/30'
-                    : 'bg-gray-950/60 text-gray-400 border border-gray-800/60'
+                    ? 'bg-gradient-to-r from-brand-600 to-purple-600 text-white shadow-md shadow-brand-500/25 ring-1 ring-white/10'
+                    : 'bg-gray-850/80 text-gray-300 border border-gray-700/60 hover:text-white hover:bg-gray-800'
                 }`}
               >
-                <Icon size={14} />
-                <span>{label}</span>
+                <Icon size={14} className={isActive ? 'text-white' : 'text-brand-400'} />
+                <span className='whitespace-nowrap'>{label}</span>
                 {id === 'products' && productCount > 0 && (
-                  <span className='text-[10px] opacity-80'>({productCount})</span>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
+                    isActive ? 'bg-white/20 text-white' : 'bg-brand-500/20 text-brand-300'
+                  }`}>
+                    {productCount}
+                  </span>
                 )}
               </button>
             )

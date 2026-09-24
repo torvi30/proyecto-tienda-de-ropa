@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Plus, Pencil, Trash2, Check, X, Loader2, Layers, Tag } from 'lucide-react'
 import { db } from '../../lib/firebaseClient'
 import {
@@ -20,6 +20,7 @@ const CategoryManager = () => {
   const [editingName, setEditingName] = useState('')
   const [updatingId, setUpdatingId] = useState(null)
   const [deleteConfirmId, setDeleteConfirmId] = useState(null)
+  const inputRef = useRef(null)
 
   // Create new category
   const handleCreateCategory = async (e) => {
@@ -27,6 +28,7 @@ const CategoryManager = () => {
     const trimmed = newCategoryName.trim()
     if (!trimmed) {
       toast.error('Ingresa un nombre para la categoría')
+      inputRef.current?.focus()
       return
     }
 
@@ -141,6 +143,7 @@ const CategoryManager = () => {
               <Tag size={16} />
             </div>
             <input
+              ref={inputRef}
               type='text'
               value={newCategoryName}
               onChange={(e) => setNewCategoryName(e.target.value)}
@@ -151,13 +154,17 @@ const CategoryManager = () => {
 
           <button
             type='submit'
-            disabled={creating || !newCategoryName.trim()}
-            className='btn-primary py-3 px-6 text-sm flex items-center justify-center gap-2 shrink-0 font-sans'
+            disabled={creating}
+            className={`py-3.5 px-6 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 shrink-0 font-sans transition-all duration-200 active:scale-[0.98] ${
+              newCategoryName.trim()
+                ? 'bg-gradient-to-r from-brand-600 via-brand-500 to-purple-600 text-white shadow-lg shadow-brand-500/30 hover:shadow-brand-500/50 hover:brightness-110 cursor-pointer'
+                : 'bg-gray-800 text-gray-200 border border-gray-700 hover:border-brand-500/50 hover:bg-gray-750 cursor-pointer shadow-sm'
+            }`}
           >
             {creating ? (
               <Loader2 size={16} className='animate-spin' />
             ) : (
-              <Plus size={16} />
+              <Plus size={16} className={newCategoryName.trim() ? 'text-white' : 'text-brand-400'} />
             )}
             <span>{creating ? 'Creando...' : 'Crear Categoría'}</span>
           </button>
