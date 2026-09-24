@@ -17,15 +17,25 @@ const useProducts = () => {
       }
 
       try {
-        const q = query(collection(db, 'products'), orderBy('created_at', 'desc'))
-        const querySnapshot = await getDocs(q)
-        const items = []
-        querySnapshot.forEach((doc) => {
-          const data = doc.data()
-          if (data.is_visible !== false && data.stock_status !== 'sold_out') {
-            items.push({ id: doc.id, ...data })
-          }
-        })
+        let items = []
+        try {
+          const q = query(collection(db, 'products'), orderBy('created_at', 'desc'))
+          const querySnapshot = await getDocs(q)
+          querySnapshot.forEach((doc) => {
+            const data = doc.data()
+            if (data.is_visible !== false && data.stock_status !== 'sold_out') {
+              items.push({ id: doc.id, ...data })
+            }
+          })
+        } catch {
+          const fallbackSnapshot = await getDocs(collection(db, 'products'))
+          fallbackSnapshot.forEach((doc) => {
+            const data = doc.data()
+            if (data.is_visible !== false && data.stock_status !== 'sold_out') {
+              items.push({ id: doc.id, ...data })
+            }
+          })
+        }
 
         // Si la base de datos aún no tiene prendas creadas, mostrar prendas de demostración
         if (items.length === 0) {
