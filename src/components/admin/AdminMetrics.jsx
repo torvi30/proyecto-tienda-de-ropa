@@ -18,7 +18,7 @@ const AdminMetrics = ({ onNavigateTab }) => {
   const sym = settings?.currency_symbol || '$'
   const storeName = settings?.store_name || 'Boutique'
 
-  // Escuchar toda la colección de productos en Firestore en TIEMPO REAL
+  // Real-time listener for products collection in Firestore
   useEffect(() => {
     if (!db) {
       setLoading(false)
@@ -37,7 +37,7 @@ const AdminMetrics = ({ onNavigateTab }) => {
         setLoading(false)
       },
       (err) => {
-        console.error('Error cargando métricas en Firestore:', err)
+        console.error('Error loading Firestore metrics:', err)
         setLoading(false)
       }
     )
@@ -45,7 +45,7 @@ const AdminMetrics = ({ onNavigateTab }) => {
     return () => unsubscribe()
   }, [])
 
-  // Cálculos de Inteligencia de Negocio
+  // Business Intelligence computations
   const stats = useMemo(() => {
     const total = products.length
 
@@ -62,36 +62,36 @@ const AdminMetrics = ({ onNavigateTab }) => {
     let minPriceProduct = null
     let maxPriceProduct = null
 
-    // Categoría map
+    // Category distribution map
     const categoryCountMap = {}
 
     products.forEach((p) => {
       const price = Number(p.price) || 0
       const origPrice = Number(p.original_price) || 0
 
-      // Valor comercial (si no está agotado)
+      // Active inventory commercial value (excluding sold-out products)
       if (p.stock_status !== 'sold_out') {
         totalInventoryValue += price
       }
 
-      // Estados de stock
+      // Stock status counters
       if (p.stock_status === 'available') availableCount++
       else if (p.stock_status === 'low_stock') lowStockCount++
       else if (p.stock_status === 'sold_out') soldOutCount++
 
-      // Visibilidad
+      // Visibility counter
       if (p.is_visible !== false) visibleCount++
 
-      // Ofertas
+      // Promotional discount counters
       if (p.is_on_sale && origPrice > price) {
         promoCount++
         totalDiscountSavings += origPrice - price
       }
 
-      // Destacados
+      // Featured garments counter
       if (p.is_featured) featuredCount++
 
-      // Precios extremos
+      // Price extremes (minimum / maximum)
       if (price < minPrice && price > 0) {
         minPrice = price
         minPriceProduct = p
@@ -101,7 +101,7 @@ const AdminMetrics = ({ onNavigateTab }) => {
         maxPriceProduct = p
       }
 
-      // Conteo por categoría
+      // Count items per category
       const catId = p.category_id || 'sin_categoria'
       categoryCountMap[catId] = (categoryCountMap[catId] || 0) + 1
     })
@@ -136,14 +136,14 @@ const AdminMetrics = ({ onNavigateTab }) => {
     )
   }
 
-  // Porcentajes de salud de stock
+  // Inventory stock health percentages
   const availablePct = stats.total > 0 ? Math.round((stats.availableCount / stats.total) * 100) : 0
   const lowStockPct = stats.total > 0 ? Math.round((stats.lowStockCount / stats.total) * 100) : 0
   const soldOutPct = stats.total > 0 ? Math.round((stats.soldOutCount / stats.total) * 100) : 0
 
   return (
     <div className='space-y-6 font-sans animate-fade-in'>
-      {/* 1. Header Ejecutivo del Dashboard */}
+      {/* 1. Executive Dashboard Header */}
       <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-800/80'>
         <div>
           <div className='flex items-center gap-2 text-brand-400 text-xs font-semibold uppercase tracking-wider mb-1'>
@@ -158,16 +158,16 @@ const AdminMetrics = ({ onNavigateTab }) => {
           </p>
         </div>
 
-        {/* Badge de conexión en vivo */}
+        {/* Real-time connection badge indicator */}
         <div className='flex items-center gap-2 self-start sm:self-auto px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold'>
           <span className='w-2 h-2 rounded-full bg-emerald-400 animate-pulse' />
           <span>Sincronizado en tiempo real</span>
         </div>
       </div>
 
-      {/* 2. Tarjetas Principales de KPI (Glow & Glassmorphism) */}
+      {/* 2. Main KPI Metric Cards (Glow & Glassmorphism) */}
       <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4'>
-        {/* KPI 1: Capital en Inventario */}
+        {/* KPI 1: Active Inventory Capital */}
         <div className='relative overflow-hidden bg-gradient-to-br from-brand-950/40 via-gray-900/60 to-gray-900/40 border border-brand-500/30 rounded-3xl p-5 shadow-xl'>
           <div className='flex items-center justify-between mb-3'>
             <span className='text-gray-400 text-xs font-semibold uppercase tracking-wider'>
@@ -186,7 +186,7 @@ const AdminMetrics = ({ onNavigateTab }) => {
           </p>
         </div>
 
-        {/* KPI 2: Total de Prendas */}
+        {/* KPI 2: Total Garments Count */}
         <div className='relative overflow-hidden bg-gradient-to-br from-gray-900/80 via-gray-900/50 to-gray-950 border border-gray-800 rounded-3xl p-5 shadow-xl'>
           <div className='flex items-center justify-between mb-3'>
             <span className='text-gray-400 text-xs font-semibold uppercase tracking-wider'>
@@ -208,7 +208,7 @@ const AdminMetrics = ({ onNavigateTab }) => {
           </p>
         </div>
 
-        {/* KPI 3: Prendas en Oferta */}
+        {/* KPI 3: On-Sale Items */}
         <div className='relative overflow-hidden bg-gradient-to-br from-pink-950/30 via-gray-900/50 to-gray-950 border border-pink-500/30 rounded-3xl p-5 shadow-xl'>
           <div className='flex items-center justify-between mb-3'>
             <span className='text-gray-400 text-xs font-semibold uppercase tracking-wider'>
@@ -226,7 +226,7 @@ const AdminMetrics = ({ onNavigateTab }) => {
           </p>
         </div>
 
-        {/* KPI 4: Prendas Destacadas */}
+        {/* KPI 4: Featured Items */}
         <div className='relative overflow-hidden bg-gradient-to-br from-amber-950/30 via-gray-900/50 to-gray-950 border border-amber-500/30 rounded-3xl p-5 shadow-xl'>
           <div className='flex items-center justify-between mb-3'>
             <span className='text-gray-400 text-xs font-semibold uppercase tracking-wider'>
@@ -245,9 +245,9 @@ const AdminMetrics = ({ onNavigateTab }) => {
         </div>
       </div>
 
-      {/* 3. Filas de Análisis Gráfico y Distribución */}
+      {/* 3. Graphical Analysis & Stock Health Distribution */}
       <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
-        {/* Panel Izquierdo: Salud del Inventario */}
+        {/* Left Panel: Inventory Health & Stock States */}
         <div className='bg-gray-900/60 border border-gray-800 rounded-3xl p-5 sm:p-6 shadow-xl space-y-5'>
           <div className='flex items-center justify-between pb-3 border-b border-gray-800/80'>
             <div>
@@ -263,7 +263,7 @@ const AdminMetrics = ({ onNavigateTab }) => {
             </span>
           </div>
 
-          {/* Barra de progreso visual segmentada estilo Shopify */}
+          {/* Visual segmented progress bar */}
           <div className='space-y-2'>
             <div className='h-4 w-full bg-gray-950 rounded-full overflow-hidden flex border border-gray-800 p-0.5'>
               {availablePct > 0 && (
@@ -289,7 +289,7 @@ const AdminMetrics = ({ onNavigateTab }) => {
               )}
             </div>
 
-            {/* Leyenda de colores */}
+            {/* Color legend for stock health */}
             <div className='grid grid-cols-3 gap-2 pt-2 text-xs'>
               <div className='p-3 rounded-2xl bg-gray-950/70 border border-gray-800/80'>
                 <div className='flex items-center gap-1.5 text-emerald-400 font-semibold'>
@@ -326,7 +326,7 @@ const AdminMetrics = ({ onNavigateTab }) => {
             </div>
           </div>
 
-          {/* Recomendación inteligente */}
+          {/* Smart inventory restock alert */}
           {stats.lowStockCount > 0 && (
             <div className='p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-300 flex items-start gap-2.5'>
               <AlertTriangle size={16} className='text-amber-400 shrink-0 mt-0.5' />
@@ -338,7 +338,7 @@ const AdminMetrics = ({ onNavigateTab }) => {
           )}
         </div>
 
-        {/* Panel Derecho: Distribución por Categorías */}
+        {/* Right Panel: Distribution by Categories */}
         <div className='bg-gray-900/60 border border-gray-800 rounded-3xl p-5 sm:p-6 shadow-xl space-y-5'>
           <div className='flex items-center justify-between pb-3 border-b border-gray-800/80'>
             <div>
@@ -392,7 +392,7 @@ const AdminMetrics = ({ onNavigateTab }) => {
         </div>
       </div>
 
-      {/* 4. Inteligencia de Precios & Rango */}
+      {/* 4. Pricing Intelligence & Range Distribution */}
       <div className='bg-gradient-to-br from-gray-900/90 via-gray-900/50 to-gray-950 border border-gray-800 rounded-3xl p-5 sm:p-6 shadow-xl'>
         <div className='flex items-center justify-between pb-3 border-b border-gray-800/80 mb-4'>
           <div>

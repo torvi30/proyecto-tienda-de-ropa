@@ -160,7 +160,7 @@ const CartDrawer = () => {
                 key={`${item.product.id}-${item.size}`}
                 className='flex gap-3 p-3 bg-gray-800/60 rounded-2xl border border-gray-750/60 hover:border-gray-700 transition-all'
               >
-                {/* Imagen miniatura */}
+                {/* Item thumbnail image */}
                 <div
                   className='w-16 h-20 rounded-xl overflow-hidden shrink-0 bg-gray-800 border border-gray-700/50'
                   style={{ aspectRatio: '4/5' }}
@@ -172,14 +172,14 @@ const CartDrawer = () => {
                   />
                 </div>
 
-                {/* Info del producto */}
+                {/* Product details and sizing */}
                 <div className='flex-1 min-w-0 flex flex-col justify-between'>
                   <div>
                     <div className='flex items-start justify-between gap-2'>
                       <p className='text-gray-100 text-sm font-medium leading-snug line-clamp-1'>
                         {item.product.name}
                       </p>
-                      {/* Eliminar item */}
+                      {/* Remove item button */}
                       <button
                         onClick={() => removeItem(item.product.id, item.size)}
                         className='text-gray-500 hover:text-red-400 hover:bg-red-500/10 p-1 rounded transition-colors -mr-1'
@@ -216,7 +216,7 @@ const CartDrawer = () => {
                     </div>
                   </div>
 
-                  {/* Controles de cantidad y subtotal */}
+                  {/* Quantity adjustments and subtotal */}
                   <div className='flex items-center justify-between mt-2 pt-2 border-t border-gray-700/40'>
                     <div className='flex items-center gap-1.5 bg-gray-900/80 rounded-lg p-0.5 border border-gray-750'>
                       <button
@@ -248,10 +248,10 @@ const CartDrawer = () => {
           )}
         </div>
 
-        {/* Footer con total y checkout */}
+        {/* Drawer footer with totals, customer address, and WhatsApp checkout */}
         {items.length > 0 && (
           <div className='p-4 sm:p-5 border-t border-gray-800 bg-gray-950/70 space-y-3 pb-6 sm:pb-6'>
-            {/* Datos para el Envío (Auto-guardable) */}
+            {/* Customer shipping details (Autosaved to localStorage) */}
             <div className='bg-gray-900/90 border border-gray-800 rounded-2xl p-3 space-y-2 text-left'>
               <div className='flex items-center justify-between'>
                 <div className='flex items-center gap-1.5 text-xs font-semibold text-gray-200'>

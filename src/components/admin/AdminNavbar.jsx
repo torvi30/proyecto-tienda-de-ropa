@@ -22,9 +22,9 @@ const AdminNavbar = ({
   return (
     <header className='bg-gray-900/95 backdrop-blur-md border-b border-gray-800 sticky top-0 z-40 transition-all'>
       <div className='page-container'>
-        {/* Fila principal del navbar */}
+        {/* Main navbar row */}
         <div className='flex items-center justify-between gap-4 py-3'>
-          {/* Logo y estado de conexión */}
+          {/* Brand logo & connectivity status */}
           <div className='flex items-center gap-3 shrink-0'>
             <div className='w-9 h-9 bg-gradient-to-tr from-brand-600/30 to-purple-500/20 border border-brand-500/40 rounded-xl flex items-center justify-center shadow-md shadow-brand-500/10'>
               <LayoutGrid size={18} className='text-brand-400' />
@@ -45,7 +45,7 @@ const AdminNavbar = ({
             </div>
           </div>
 
-          {/* Navegación por tabs en Desktop / Tablet (Segmented Control) */}
+          {/* Segmented tab navigation on Desktop / Tablet */}
           <nav className='hidden md:flex items-center bg-gray-950 p-1 rounded-2xl border border-gray-800/80 shadow-inner'>
             {TABS.map(({ id, label, icon: Icon }) => {
               const isActive = activeTab === id
@@ -78,9 +78,9 @@ const AdminNavbar = ({
             })}
           </nav>
 
-          {/* Acciones y Perfil de Usuario */}
+          {/* Action buttons and user profile */}
           <div className='flex items-center gap-2 sm:gap-3 shrink-0'>
-            {/* Email de sesión */}
+            {/* Authenticated user session email */}
             {user?.email && (
               <div className='hidden lg:flex items-center gap-1.5 px-3 py-1.5 bg-gray-950/60 rounded-xl border border-gray-800/80 text-xs text-gray-300'>
                 <User size={13} className='text-brand-400' />
@@ -90,7 +90,7 @@ const AdminNavbar = ({
               </div>
             )}
 
-            {/* Ver tienda pública */}
+            {/* View public store storefront */}
             <Link
               to='/'
               id='admin-view-store'
@@ -104,7 +104,7 @@ const AdminNavbar = ({
               <ExternalLink size={12} className='text-gray-400' />
             </Link>
 
-            {/* Salir */}
+            {/* Sign out action button */}
             <button
               onClick={onSignOut}
               id='admin-logout'
@@ -117,7 +117,7 @@ const AdminNavbar = ({
           </div>
         </div>
 
-        {/* Fila secundaria de Tabs en Móvil */}
+        {/* Secondary mobile tab navigation row */}
         <div className='md:hidden flex items-center justify-around gap-1 pb-3 pt-1 border-t border-gray-800/60'>
           {TABS.map(({ id, label, icon: Icon }) => {
             const isActive = activeTab === id

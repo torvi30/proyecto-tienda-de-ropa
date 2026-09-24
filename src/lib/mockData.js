@@ -1,6 +1,6 @@
 // =============================================================
-// DATOS MOCK — Modo Demo (VITE_DEMO_MODE=true)
-// Simula la BD de Supabase para desarrollar sin configurarla
+// MOCK DATA — Demo Mode (VITE_DEMO_MODE=true)
+// Simulates the backend store database for rapid zero-config dev
 // =============================================================
 
 export const mockSettings = {

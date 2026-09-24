@@ -21,7 +21,7 @@ const CategoryManager = () => {
   const [updatingId, setUpdatingId] = useState(null)
   const [deleteConfirmId, setDeleteConfirmId] = useState(null)
 
-  // Crear nueva categoría
+  // Create new category
   const handleCreateCategory = async (e) => {
     e.preventDefault()
     const trimmed = newCategoryName.trim()
@@ -30,7 +30,7 @@ const CategoryManager = () => {
       return
     }
 
-    // Verificar si ya existe una con el mismo nombre
+    // Check if category already exists with identical name
     const exists = categories.some(
       (c) => c.name.toLowerCase() === trimmed.toLowerCase()
     )
@@ -69,7 +69,7 @@ const CategoryManager = () => {
     }
   }
 
-  // Guardar edición de nombre
+  // Save edited category name
   const handleSaveEdit = async (cat) => {
     const trimmed = editingName.trim()
     if (!trimmed) {
@@ -102,7 +102,7 @@ const CategoryManager = () => {
     }
   }
 
-  // Eliminar categoría
+  // Delete category
   const handleDelete = async (cat) => {
     setUpdatingId(cat.id)
     try {
@@ -121,7 +121,7 @@ const CategoryManager = () => {
 
   return (
     <div className='max-w-2xl mx-auto space-y-6 font-sans'>
-      {/* Tarjeta para crear categoría */}
+      {/* Create new category card */}
       <div className='bg-gray-900/80 border border-gray-800 rounded-3xl p-6 sm:p-7 shadow-xl backdrop-blur-md'>
         <div className='flex items-center gap-3 mb-4'>
           <div className='w-10 h-10 rounded-xl bg-brand-600/20 border border-brand-500/30 flex items-center justify-center text-brand-400'>
@@ -164,7 +164,7 @@ const CategoryManager = () => {
         </form>
       </div>
 
-      {/* Lista de categorías existentes */}
+      {/* Existing categories list */}
       <div className='bg-gray-900/60 border border-gray-800/80 rounded-3xl p-6 sm:p-7 shadow-xl'>
         <div className='flex items-center justify-between pb-4 border-b border-gray-800 mb-4'>
           <h4 className='text-gray-200 font-semibold text-sm'>
@@ -190,7 +190,7 @@ const CategoryManager = () => {
                 key={cat.id}
                 className='flex items-center justify-between bg-gray-850/60 hover:bg-gray-800/80 border border-gray-800 hover:border-gray-700/80 rounded-2xl p-3.5 transition-all'
               >
-                {/* Nombre de la categoría o modo edición */}
+                {/* Category name or inline edit form */}
                 {editingId === cat.id ? (
                   <div className='flex items-center gap-2 flex-1 mr-2'>
                     <input
@@ -234,7 +234,7 @@ const CategoryManager = () => {
                   </div>
                 )}
 
-                {/* Acciones */}
+                {/* Action controls */}
                 {editingId !== cat.id && (
                   <div className='flex items-center gap-1.5 shrink-0'>
                     {deleteConfirmId === cat.id ? (

@@ -2,7 +2,7 @@ import { Navigate } from 'react-router-dom'
 import useAuth from '../../hooks/useAuth'
 import Spinner from './Spinner'
 
-// Protege rutas de admin — redirige a /login si no hay sesion
+// Protects admin routes — redirects to /login if unauthenticated
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth()
 

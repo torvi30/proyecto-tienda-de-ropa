@@ -1,6 +1,6 @@
 import { SlidersHorizontal, X, Flame, Star } from 'lucide-react'
 
-// Tallas globales del sistema
+// Global standard sizing list
 const ALL_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'Única']
 
 const FilterBar = ({
@@ -29,7 +29,7 @@ const FilterBar = ({
   return (
     <div className='sticky top-[57px] sm:top-[61px] z-30 bg-gray-950/95 backdrop-blur-md border-b border-gray-800/80 py-2.5 transition-all duration-200'>
       <div className='page-container space-y-2'>
-        {/* Fila 1: Categorias, Ofertas y Destacados con scroll horizontal suave */}
+        {/* Row 1: Categories, Sale Offers, and Featured Filters with horizontal scroll */}
         <div className='flex items-center gap-2'>
           <div className='flex items-center gap-1.5 text-gray-400 shrink-0 pr-1'>
             <SlidersHorizontal size={14} className='text-brand-400' />
@@ -37,7 +37,7 @@ const FilterBar = ({
           </div>
 
           <div className='flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5'>
-            {/* Botón Todas */}
+            {/* 'All' category button */}
             <button
               id='filter-all-categories'
               onClick={() => {
@@ -54,7 +54,7 @@ const FilterBar = ({
               Todas
             </button>
 
-            {/* Botón especial Destacados si hay prendas destacadas */}
+            {/* Featured items filter button if featured products exist */}
             {featuredCount > 0 && (
               <button
                 id='filter-featured'
@@ -70,7 +70,7 @@ const FilterBar = ({
               </button>
             )}
 
-            {/* Botón especial Ofertas si hay productos en oferta */}
+            {/* Special sales filter button if discounted items exist */}
             {saleCount > 0 && (
               <button
                 id='filter-sales'
@@ -107,7 +107,7 @@ const FilterBar = ({
           </div>
         </div>
 
-        {/* Fila 2: Tallas y contador */}
+        {/* Row 2: Sizing chips and visible item count */}
         <div className='flex items-center justify-between gap-2 pt-0.5 border-t border-gray-900'>
           <div className='flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 min-w-0'>
             <span className='text-gray-500 text-xs shrink-0 font-medium'>Talla:</span>
@@ -125,7 +125,7 @@ const FilterBar = ({
             ))}
           </div>
 
-          {/* Limpiar filtros + contador visible */}
+          {/* Reset filters + visible counter */}
           <div className='flex items-center gap-2.5 shrink-0 pl-2'>
             {hasActiveFilter && (
               <button

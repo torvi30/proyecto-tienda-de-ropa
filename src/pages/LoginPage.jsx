@@ -11,7 +11,7 @@ import toast from 'react-hot-toast'
 const LoginPage = () => {
   const { user, loading, signIn, signUp, signInWithGoogle, resetPassword } = useAuth()
 
-  // Modo: 'login' | 'register' | 'forgot'
+  // Auth mode: 'login' | 'register' | 'forgot'
   const [mode, setMode] = useState('login')
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -22,7 +22,7 @@ const LoginPage = () => {
   const [successMsg, setSuccessMsg] = useState(null)
   const [submitting, setSubmitting] = useState(false)
 
-  // Si ya está autenticado, redirigir al panel
+  // Redirect to admin panel if already authenticated
   if (loading) {
     return (
       <div className='min-h-screen flex items-center justify-center bg-gray-950'>
@@ -41,7 +41,7 @@ const LoginPage = () => {
 
     const cleanEmail = email.trim()
 
-    // 1. Modo Recuperar Contraseña
+    // 1. Password reset mode
     if (mode === 'forgot') {
       const { error: resetErr } = await resetPassword(cleanEmail)
       setSubmitting(false)
@@ -55,7 +55,7 @@ const LoginPage = () => {
       return
     }
 
-    // 2. Modo Registro
+    // 2. Registration mode
     if (mode === 'register') {
       if (password.length < 6) {
         setError('La contraseña debe tener al menos 6 caracteres.')
@@ -94,7 +94,7 @@ const LoginPage = () => {
       return
     }
 
-    // 3. Modo Inicio de Sesión
+    // 3. User login mode
     const { error: authError } = await signIn(cleanEmail, password)
     setSubmitting(false)
 
@@ -127,7 +127,7 @@ const LoginPage = () => {
     if (authError) {
       const code = authError.code || ''
       if (code === 'auth/popup-closed-by-user') {
-        // Ventana cerrada sin error ruidoso
+        // Modal closed by user without error
       } else if (code === 'auth/unauthorized-domain') {
         setError('Dominio no autorizado en Firebase Console.')
       } else {
@@ -332,7 +332,7 @@ const LoginPage = () => {
               </div>
             )}
 
-            {/* Campo Confirmar Contraseña (Solo en registro) */}
+            {/* Confirm password input (Registration mode only) */}
             {mode === 'register' && (
               <div className='animate-fade-in'>
                 <label className='text-gray-400 text-xs font-semibold uppercase tracking-wider block mb-1.5' htmlFor='auth-confirm-password'>
@@ -352,7 +352,7 @@ const LoginPage = () => {
               </div>
             )}
 
-            {/* Mensajes de Éxito */}
+            {/* Success feedback message banner */}
             {successMsg && (
               <div className='flex items-start gap-2 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-3.5 text-left animate-fade-in'>
                 <CheckCircle2 size={18} className='text-emerald-400 mt-0.5 shrink-0' />
@@ -360,7 +360,7 @@ const LoginPage = () => {
               </div>
             )}
 
-            {/* Mensajes de Error */}
+            {/* Error feedback message banner */}
             {error && (
               <div className='flex items-start gap-2 bg-red-500/10 border border-red-500/30 rounded-2xl p-3.5 text-left animate-fade-in'>
                 <AlertCircle size={18} className='text-red-400 mt-0.5 shrink-0' />
@@ -368,7 +368,7 @@ const LoginPage = () => {
               </div>
             )}
 
-            {/* Botón principal */}
+            {/* Primary form submission button */}
             <button
               type='submit'
               id='auth-submit'
@@ -396,7 +396,7 @@ const LoginPage = () => {
             </button>
           </form>
 
-          {/* Enlaces de pie de página */}
+          {/* Footer navigation links */}
           <div className='flex items-center justify-between pt-6 border-t border-gray-800/80 mt-6 text-xs text-gray-500'>
             <Link
               to='/'

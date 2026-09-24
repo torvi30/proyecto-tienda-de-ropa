@@ -15,13 +15,13 @@ const ZOOM_LEVELS = [1, 1.75, 2.5, 3.5]
 const ImageZoomModal = ({
   isOpen,
   onClose,
-  images = [], // Array de objetos { url, name, sizeKB, product } o strings
+  images = [], // Array of objects { url, name, sizeKB, product } or strings
   initialIndex = 0,
   isAdmin = false,
 }) => {
   const [currentIndex, setCurrentIndex] = useState(initialIndex)
-  const [zoomIndex, setZoomIndex] = useState(0) // índice en ZOOM_LEVELS
-  const [showCropFrame, setShowCropFrame] = useState(isAdmin) // Guía solo por defecto para admin
+  const [zoomIndex, setZoomIndex] = useState(0) // Index in ZOOM_LEVELS
+  const [showCropFrame, setShowCropFrame] = useState(isAdmin) // Default crop guide enabled for admin only
   const [isDragging, setIsDragging] = useState(false)
   const [position, setPosition] = useState({ x: 0, y: 0 })
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
@@ -90,7 +90,7 @@ const ImageZoomModal = ({
     setCurrentIndex((prev) => (prev < images.length - 1 ? prev + 1 : 0))
   }, [images.length, resetZoom])
 
-  // Controles de teclado: Escape, flechas izquierda/derecha, zoom +/-
+  // Keyboard navigation: Escape, left/right arrows, +/- zoom
   useEffect(() => {
     if (!isOpen) return
     const handleKeyDown = (e) => {
@@ -264,12 +264,12 @@ const ImageZoomModal = ({
       className='fixed inset-0 z-[9999] flex flex-col bg-gray-950/95 backdrop-blur-2xl text-gray-100 select-none animate-fade-in'
       onClick={onClose}
     >
-      {/* 1. Barra Superior de Control de Lujo */}
+      {/* 1. Top Luxury Control Header */}
       <header
         className='relative z-30 flex items-center justify-between px-3 sm:px-6 py-3 bg-gray-950/80 border-b border-gray-800/80 backdrop-blur-md'
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Lado izquierdo: Título y Contador */}
+        {/* Left side: Title and image counter */}
         <div className='flex items-center gap-2.5 min-w-0'>
           <div className='flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-500/15 border border-brand-500/30 text-brand-300 text-xs font-semibold shrink-0'>
             <Sparkles size={13} className='text-brand-400' />
@@ -290,9 +290,9 @@ const ImageZoomModal = ({
           )}
         </div>
 
-        {/* Lado derecho: Herramientas de Zoom y Cerrar */}
+        {/* Right side: Zoom tools and close button */}
         <div className='flex items-center gap-1.5 sm:gap-2 shrink-0'>
-          {/* Alternar modo Lupa (solo desktop y si no es admin) */}
+          {/* Toggle lens magnifier mode (desktop only, non-admin) */}
           {!isAdmin && (
             <button
               type='button'
@@ -312,7 +312,7 @@ const ImageZoomModal = ({
             </button>
           )}
 
-          {/* Guía de corte 4:5 solo si es Admin */}
+          {/* 4:5 Catalog crop guide (Admin mode only) */}
           {isAdmin && (
             <button
               type='button'
@@ -329,7 +329,7 @@ const ImageZoomModal = ({
             </button>
           )}
 
-          {/* Grupo de Controles de Zoom */}
+          {/* Zoom controls group */}
           <div className='flex items-center bg-gray-900 border border-gray-800 rounded-xl p-0.5 shadow-inner'>
             <button
               type='button'
@@ -372,7 +372,7 @@ const ImageZoomModal = ({
             )}
           </div>
 
-          {/* Botón Cerrar visible y claro */}
+          {/* Prominent close button */}
           <button
             type='button'
             onClick={onClose}
@@ -385,7 +385,7 @@ const ImageZoomModal = ({
         </div>
       </header>
 
-      {/* 2. Área Central con Visor Ultra-HD */}
+      {/* 2. Central Ultra-HD Viewport Area */}
       <main
         ref={containerRef}
         className='relative flex-1 flex items-center justify-center overflow-hidden p-2 sm:p-6 select-none touch-none'
@@ -403,7 +403,7 @@ const ImageZoomModal = ({
         style={{ cursor: currentZoom > 1 ? (isDragging ? 'grabbing' : 'grab') : 'crosshair' }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Contenedor de la prenda */}
+        {/* Garment container */}
         <div
           className={`relative flex items-center justify-center transition-all duration-200 ${
             showCropFrame && isAdmin
@@ -417,7 +417,7 @@ const ImageZoomModal = ({
           }}
           onDoubleClick={handleToggleZoom}
         >
-          {/* Imagen principal */}
+          {/* Main image element */}
           <img
             ref={imgRef}
             src={currentUrl}
@@ -430,7 +430,7 @@ const ImageZoomModal = ({
             }}
           />
 
-          {/* Lente Lupa Flotante de Micro-Detalle (Efecto Shein / Farfetch) */}
+          {/* Floating Precision Magnifier Lens (Shein / Farfetch luxury effect) */}
           {currentZoom === 1 && lensActive && lensPos.active && (
             <div
               className='pointer-events-none fixed z-40 w-44 h-44 sm:w-56 sm:h-56 rounded-full border-2 border-brand-400 shadow-2xl shadow-brand-500/40 overflow-hidden bg-gray-950 animate-scale-in ring-4 ring-black/40'
@@ -443,7 +443,7 @@ const ImageZoomModal = ({
                 backgroundPosition: `${lensPos.xPercent}% ${lensPos.yPercent}%`,
               }}
             >
-              {/* Retículo de precisión */}
+              {/* Precision reticle crosshair */}
               <div className='absolute inset-0 flex items-center justify-center opacity-30'>
                 <div className='w-full h-[1px] bg-brand-400' />
                 <div className='h-full w-[1px] bg-brand-400 absolute' />
@@ -454,7 +454,7 @@ const ImageZoomModal = ({
             </div>
           )}
 
-          {/* Marcadores de encuadre para admin */}
+          {/* Aspect ratio crop frame markers for admin */}
           {showCropFrame && isAdmin && (
             <>
               <div className='absolute top-3 left-3 bg-gray-950/80 border border-brand-500/30 text-brand-300 text-[10px] font-bold px-2 py-0.5 rounded-full pointer-events-none'>
@@ -467,7 +467,7 @@ const ImageZoomModal = ({
             </>
           )}
 
-          {/* Indicador de ayuda al usuario en pantalla completa */}
+          {/* Fullscreen touch and gesture hint */}
           {currentZoom === 1 && !lensPos.active && (
             <div className='absolute bottom-3 bg-gray-950/80 border border-gray-800 text-gray-300 text-[11px] px-3.5 py-1.5 rounded-full pointer-events-none backdrop-blur-md flex items-center gap-2 shadow-lg'>
               <Move size={12} className='text-brand-400' />
@@ -476,7 +476,7 @@ const ImageZoomModal = ({
           )}
         </div>
 
-        {/* Flecha Anterior */}
+        {/* Previous image arrow button */}
         {images.length > 1 && (
           <button
             type='button'
@@ -491,7 +491,7 @@ const ImageZoomModal = ({
           </button>
         )}
 
-        {/* Flecha Siguiente */}
+        {/* Next image arrow button */}
         {images.length > 1 && (
           <button
             type='button'
@@ -507,7 +507,7 @@ const ImageZoomModal = ({
         )}
       </main>
 
-      {/* 3. Barra Inferior Estilo Boutique: Detalle y Compra Asistida */}
+      {/* 3. Luxury Bottom Bar: Details & Assisted Checkout */}
       <footer
         className='relative z-30 bg-gray-950/95 border-t border-gray-800/80 px-3 sm:px-6 py-3 backdrop-blur-xl'
         onClick={(e) => e.stopPropagation()}
@@ -515,7 +515,7 @@ const ImageZoomModal = ({
         <div className='max-w-4xl mx-auto'>
           {product ? (
             <div className='flex flex-col sm:flex-row items-center justify-between gap-3'>
-              {/* Información y Precio */}
+              {/* Product title and pricing */}
               <div className='flex items-center justify-between w-full sm:w-auto gap-3'>
                 <div>
                   <h4 className='text-gray-100 font-semibold text-sm sm:text-base leading-tight'>
@@ -545,7 +545,7 @@ const ImageZoomModal = ({
                 </div>
               </div>
 
-              {/* Tallas y Botón de Agregar a la bolsa */}
+              {/* Size selector and direct add-to-bag action */}
               <div className='flex items-center flex-wrap gap-2 w-full sm:w-auto justify-end'>
                 {product.sizes && product.sizes.length > 0 && (
                   <div className='flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1'>
@@ -570,7 +570,7 @@ const ImageZoomModal = ({
                   </div>
                 )}
 
-                {/* Si recién agregó la prenda, ofrecer ir a pagar o seguir explorando */}
+                {/* Post-add options: Open bag drawer or continue browsing */}
                 {justAdded ? (
                   <div className='flex items-center gap-2 animate-scale-in'>
                     <button

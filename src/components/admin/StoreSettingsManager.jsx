@@ -97,7 +97,7 @@ const StoreSettingsManager = () => {
       </div>
 
       <form onSubmit={handleSave} className='space-y-6'>
-        {/* Tarjeta 1: WhatsApp y Pedidos */}
+        {/* Card 1: WhatsApp Checkout & Orders */}
         <div className='bg-gray-900/60 border border-gray-800 rounded-3xl p-5 sm:p-7 shadow-xl space-y-5'>
           <div className='flex items-center gap-3 pb-3 border-b border-gray-800/80'>
             <div className='w-10 h-10 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400'>
@@ -160,7 +160,7 @@ const StoreSettingsManager = () => {
           </div>
         </div>
 
-        {/* Tarjeta 2: Identidad y Marca */}
+        {/* Card 2: Store Identity & Branding */}
         <div className='bg-gray-900/60 border border-gray-800 rounded-3xl p-5 sm:p-7 shadow-xl space-y-5'>
           <div className='flex items-center gap-3 pb-3 border-b border-gray-800/80'>
             <div className='w-10 h-10 rounded-2xl bg-brand-600/15 border border-brand-500/30 flex items-center justify-center text-brand-400'>
@@ -223,7 +223,7 @@ const StoreSettingsManager = () => {
           </div>
         </div>
 
-        {/* Tarjeta 3: Vista Previa del Mensaje de WhatsApp */}
+        {/* Card 3: WhatsApp Checkout Message Preview */}
         <div className='bg-gradient-to-br from-emerald-950/20 via-gray-900/60 to-gray-950 border border-emerald-500/25 rounded-3xl p-5 sm:p-7 shadow-xl'>
           <div className='flex items-center gap-2 text-emerald-400 text-xs font-semibold uppercase tracking-wider mb-3'>
             <ShieldCheck size={16} />
@@ -242,7 +242,7 @@ const StoreSettingsManager = () => {
           </div>
         </div>
 
-        {/* Botón Guardar */}
+        {/* Save Configuration Submit Button */}
         <div className='flex justify-end pt-2'>
           <button
             type='submit'

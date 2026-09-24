@@ -48,7 +48,7 @@ const SizeMeasurePicker = ({ selected = [], onChange, label = 'Tallas / Medidas 
 
   return (
     <div className='space-y-2.5 font-sans'>
-      {/* Encabezado */}
+      {/* Header & selected count */}
       <div className='flex items-center justify-between'>
         <label className='text-gray-300 text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5'>
           <Ruler size={13} className='text-brand-400' />
@@ -61,7 +61,7 @@ const SizeMeasurePicker = ({ selected = [], onChange, label = 'Tallas / Medidas 
         )}
       </div>
 
-      {/* Chips seleccionados actualmente */}
+      {/* Currently selected sizing chips */}
       {selected.length > 0 && (
         <div className='p-2.5 bg-gray-950/70 border border-brand-500/30 rounded-2xl flex flex-wrap gap-1.5 items-center'>
           <span className='text-gray-500 text-[11px] font-semibold uppercase mr-1 select-none'>
@@ -86,7 +86,7 @@ const SizeMeasurePicker = ({ selected = [], onChange, label = 'Tallas / Medidas 
         </div>
       )}
 
-      {/* Tabs de tipo de producto */}
+      {/* Product category sizing preset tabs */}
       <div className='flex gap-1 overflow-x-auto no-scrollbar py-0.5'>
         {Object.entries(SIZE_PRESETS).map(([key, { label: tabLabel }]) => (
           <button
@@ -96,7 +96,7 @@ const SizeMeasurePicker = ({ selected = [], onChange, label = 'Tallas / Medidas 
             className={`shrink-0 px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
               activeTab === key
                 ? 'bg-gray-800 text-brand-300 border border-brand-500/30'
-                : 'text-gray-500 hover:text-gray-300 hover:bg-gray-850'
+                : 'text-gray-500 hover:text-gray-300 hover:bg-gray-855'
             }`}
           >
             {tabLabel}
@@ -104,7 +104,7 @@ const SizeMeasurePicker = ({ selected = [], onChange, label = 'Tallas / Medidas 
         ))}
       </div>
 
-      {/* Chips del preset activo */}
+      {/* Preset size chips */}
       <div className='flex flex-wrap gap-1.5 p-2 bg-gray-900/50 border border-gray-800/80 rounded-2xl'>
         {SIZE_PRESETS[activeTab].items.map((item) => {
           const isSelected = selected.includes(item)
@@ -123,7 +123,7 @@ const SizeMeasurePicker = ({ selected = [], onChange, label = 'Tallas / Medidas 
         })}
       </div>
 
-      {/* Input para agregar cualquier medida o tamaño personalizado */}
+      {/* Custom size / dimension write-in input */}
       <div className='flex items-center gap-2 pt-0.5'>
         <div className='relative flex-1'>
           <input

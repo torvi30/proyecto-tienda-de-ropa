@@ -14,20 +14,20 @@ import toast from 'react-hot-toast'
 
 const MAX_FILES = 20
 
-// Estado inicial de cada item del lote
+// Initial state generator for each batch item
 const makeItem = (file, previewUrl, compressedSizeKB, originalSizeKB) => ({
   id: crypto.randomUUID(),
   file,
   previewUrl,
   compressedSizeKB,
   originalSizeKB,
-  // Campos del formulario
+  // Form input values
   name: file.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' '),
   price: '',
   categoryId: '',
   sizes: [],
-  // Estado
-  status: 'idle', // idle | uploading | done | error
+  // Status lifecycle: idle | uploading | done | error
+  status: 'idle',
   error: null,
 })
 
@@ -45,7 +45,7 @@ const BatchUpload = ({ onSuccess }) => {
   const { compressBatch } = useImageCompressor()
   const { categories } = useCategories()
 
-  // Procesar archivos seleccionados
+  // Process selected files from picker or drop event
   const processFiles = useCallback(async (files) => {
     const validFiles = Array.from(files)
       .filter((f) => f.type.startsWith('image/'))
@@ -77,7 +77,7 @@ const BatchUpload = ({ onSuccess }) => {
     toast.success(`${results.length} foto(s) listas para configurar`, { icon: '✅' })
   }, [items.length, compressBatch])
 
-  // Drag & Drop handlers
+  // Drag & drop handlers
   const handleDrop = (e) => {
     e.preventDefault()
     setIsDragging(false)
@@ -89,14 +89,14 @@ const BatchUpload = ({ onSuccess }) => {
     setIsDragging(true)
   }
 
-  // Actualizar campo de un item
+  // Update specific field on batch item
   const updateItem = (id, field, value) => {
     setItems((prev) =>
       prev.map((item) => (item.id === id ? { ...item, [field]: value } : item))
     )
   }
 
-  // Toggle de talla en un item
+  // Toggle sizing selection for a batch item
   const toggleSize = (id, size) => {
     setItems((prev) =>
       prev.map((item) => {
@@ -109,7 +109,7 @@ const BatchUpload = ({ onSuccess }) => {
     )
   }
 
-  // Eliminar un item del lote
+  // Remove a batch item and revoke blob preview URL
   const removeItem = (id) => {
     setItems((prev) => {
       const item = prev.find((i) => i.id === id)
@@ -118,7 +118,7 @@ const BatchUpload = ({ onSuccess }) => {
     })
   }
 
-  // Creación rápida de categoría
+  // Quick inline category creation
   const handleQuickCreateCategory = async (targetItemId) => {
     const trimmed = newCatName.trim()
     if (!trimmed) return
@@ -155,9 +155,9 @@ const BatchUpload = ({ onSuccess }) => {
     }
   }
 
-  // Guardar todo el lote
+  // Save and publish entire batch
   const handleSaveAll = async () => {
-    // Validar que todos los items tengan nombre y precio
+    // Validate that all items have name, price and at least one size
     const invalid = items.filter(
       (i) => i.status === 'idle' && (!i.name.trim() || !i.price || i.sizes.length === 0)
     )
@@ -177,11 +177,11 @@ const BatchUpload = ({ onSuccess }) => {
       )
 
       try {
-        // 1. Subir imagen a Cloudinary (WebP optimizado)
+        // 1. Upload compressed WebP image to Cloudinary
         const uploadRes = await uploadToCloudinary(item.file, item.name)
         const imageUrl = uploadRes.secure_url
 
-        // 2. Crear documento en Firestore
+        // 2. Create document in Firestore
         if (!db) throw new Error('Firestore no está inicializado. Revisa tu archivo .env')
 
         await addDoc(collection(db, 'products'), {
@@ -228,7 +228,7 @@ const BatchUpload = ({ onSuccess }) => {
 
   return (
     <div className='space-y-6'>
-      {/* Zona de Drag & Drop */}
+      {/* Drag & drop dropzone area */}
       {items.length < MAX_FILES && (
         <div
           onDrop={handleDrop}
@@ -261,7 +261,7 @@ const BatchUpload = ({ onSuccess }) => {
               <p className='text-gray-500 text-sm'>
                 Convirtiendo a WebP (max 150KB) · Ratio 4:5
               </p>
-              {/* Barra de progreso */}
+              {/* Compression progress bar */}
               <div className='w-full bg-gray-700 rounded-full h-2 max-w-xs mx-auto'>
                 <div
                   className='bg-brand-500 h-2 rounded-full transition-all duration-300'
@@ -301,7 +301,7 @@ const BatchUpload = ({ onSuccess }) => {
         </div>
       )}
 
-      {/* Contador y botón guardar */}
+      {/* Header counter & publish action button */}
       {items.length > 0 && (
         <div className='flex items-center justify-between'>
           <p className='text-gray-400 text-sm'>
@@ -327,7 +327,7 @@ const BatchUpload = ({ onSuccess }) => {
         </div>
       )}
 
-      {/* Lista de items del lote */}
+      {/* Batch items list */}
       <div className='space-y-4'>
         {items.map((item, index) => (
           <div
@@ -338,7 +338,7 @@ const BatchUpload = ({ onSuccess }) => {
               ${item.status === 'idle' || item.status === 'uploading' ? 'border-gray-700' : ''}`}
           >
             <div className='flex flex-col sm:flex-row gap-3.5 sm:gap-4 p-3.5 sm:p-4'>
-              {/* Preview de la imagen comprimida con zoom al tocar */}
+              {/* Compressed image preview with interactive zoom on click */}
               <div className='flex items-start justify-between sm:block shrink-0'>
                 <div
                   onClick={() => setZoomModalItemIndex(index)}
@@ -354,19 +354,19 @@ const BatchUpload = ({ onSuccess }) => {
                       alt='Preview'
                       className='w-full h-full object-cover'
                     />
-                    {/* Overlay sutil de zoom al hacer hover */}
+                    {/* Subtle zoom overlay on hover */}
                     <div className='absolute inset-0 bg-black/40 opacity-0 group-hover/thumb:opacity-100 transition-opacity flex flex-col items-center justify-center text-white gap-0.5 backdrop-blur-[1px]'>
                       <ZoomIn size={18} />
                       <span className='text-[10px] font-semibold'>Zoom</span>
                     </div>
                   </div>
-                  {/* Badge de compresion */}
+                  {/* Compression size badge */}
                   <div className='absolute -bottom-1 -right-1 bg-gray-950/90 border border-gray-700 rounded-md px-1.5 py-0.5 text-[10px] text-green-400 font-mono'>
                     {item.compressedSizeKB}KB
                   </div>
                 </div>
 
-                {/* Boton eliminar visible en móvil */}
+                {/* Mobile remove button */}
                 {item.status === 'idle' && (
                   <button
                     onClick={() => removeItem(item.id)}
@@ -378,10 +378,10 @@ const BatchUpload = ({ onSuccess }) => {
                 )}
               </div>
 
-              {/* Formulario del producto */}
+              {/* Product configuration form */}
               <div className='flex-1 min-w-0 space-y-3'>
                 {item.status === 'done' ? (
-                  // Estado: guardado
+                  // State: successfully published
                   <div className='flex items-center gap-2 py-3'>
                     <CheckCircle size={20} className='text-green-400 shrink-0' />
                     <div>
@@ -390,7 +390,7 @@ const BatchUpload = ({ onSuccess }) => {
                     </div>
                   </div>
                 ) : item.status === 'error' ? (
-                  // Estado: error
+                  // State: upload error
                   <div className='flex items-center gap-2 py-3'>
                     <AlertCircle size={20} className='text-red-400 shrink-0' />
                     <div>
@@ -399,15 +399,15 @@ const BatchUpload = ({ onSuccess }) => {
                     </div>
                   </div>
                 ) : item.status === 'uploading' ? (
-                  // Estado: subiendo
+                  // State: actively uploading
                   <div className='flex items-center gap-2 py-3'>
                     <Loader2 size={20} className='text-brand-400 animate-spin shrink-0' />
                     <p className='text-gray-300 text-sm'>Publicando {item.name}...</p>
                   </div>
                 ) : (
-                  // Estado: formulario editable
+                  // State: editable form
                   <>
-                    {/* Nombre */}
+                    {/* Garment name */}
                     <div>
                       <label className='text-gray-400 text-xs font-semibold uppercase tracking-wider block mb-1'>
                         Nombre de la prenda
@@ -422,7 +422,7 @@ const BatchUpload = ({ onSuccess }) => {
                     </div>
 
                     <div className='grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3'>
-                      {/* Precio */}
+                      {/* Price */}
                       <div>
                         <label className='text-gray-400 text-xs font-semibold uppercase tracking-wider block mb-1'>
                           Precio (COP)
@@ -438,7 +438,7 @@ const BatchUpload = ({ onSuccess }) => {
                         />
                       </div>
 
-                      {/* Categoria */}
+                      {/* Category */}
                       <div>
                         <div className='flex items-center justify-between mb-1'>
                           <label className='text-gray-400 text-xs font-semibold uppercase tracking-wider'>
@@ -510,7 +510,7 @@ const BatchUpload = ({ onSuccess }) => {
                       </div>
                     </div>
 
-                    {/* Tallas / Medidas / Tamaños */}
+                    {/* Sizing and measurement chips */}
                     <SizeMeasurePicker
                       selected={item.sizes}
                       onChange={(newSizes) => updateItem(item.id, 'sizes', newSizes)}
@@ -519,7 +519,7 @@ const BatchUpload = ({ onSuccess }) => {
                 )}
               </div>
 
-              {/* Boton eliminar en desktop */}
+              {/* Desktop remove button */}
               {item.status === 'idle' && (
                 <button
                   onClick={() => removeItem(item.id)}
@@ -531,7 +531,7 @@ const BatchUpload = ({ onSuccess }) => {
               )}
             </div>
 
-            {/* Info de compresion */}
+            {/* Compression savings summary */}
             {item.status === 'idle' && (
               <div className='bg-gray-900/50 border-t border-gray-700/50 px-4 py-2 flex items-center gap-3 text-xs text-gray-600'>
                 <span>Original: {item.originalSizeKB}KB</span>
@@ -548,7 +548,7 @@ const BatchUpload = ({ onSuccess }) => {
         ))}
       </div>
 
-      {/* Modal de Previsualización y Zoom HD */}
+      {/* Full HD Image Inspection and Zoom Modal */}
       <ImageZoomModal
         isOpen={zoomModalItemIndex !== null}
         onClose={() => setZoomModalItemIndex(null)}

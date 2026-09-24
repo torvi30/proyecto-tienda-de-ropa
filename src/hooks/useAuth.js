@@ -79,15 +79,15 @@ const useAuth = () => {
         try {
           await updateProfile(userCredential.user, { displayName })
         } catch (e) {
-          console.warn('No se pudo actualizar nombre de perfil:', e)
+          console.warn('Could not update profile display name:', e)
         }
       }
 
-      // Enviar correo de verificación de Firebase con token
+      // Send Firebase email verification token
       try {
         await sendEmailVerification(userCredential.user)
       } catch (e) {
-        console.warn('No se pudo enviar correo de verificación:', e)
+        console.warn('Could not send verification email:', e)
       }
 
       return { user: userCredential.user, error: null }

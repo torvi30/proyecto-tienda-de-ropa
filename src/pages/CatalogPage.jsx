@@ -22,18 +22,18 @@ const CatalogPage = () => {
   const [onlyFeatured, setOnlyFeatured] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
 
-  // Productos con oferta activa
+  // Products with active promotional pricing
   const saleProducts = useMemo(() => {
     return products.filter((p) => p.is_on_sale && p.original_price > p.price)
   }, [products])
 
-  // Productos destacados
+  // Featured products
   const featuredProducts = useMemo(() => {
     return products.filter((p) => p.is_featured)
   }, [products])
 
-  // Filtrado en memoria — sin llamada a la BD, 100% instantaneo
-  // Las prendas destacadas y ofertas siempre se ordenan de PRIMERO arriba
+  // In-memory instant filtering without round-trip database queries
+  // Featured products and promotional items are prioritized at the top
   const filteredProducts = useMemo(() => {
     const query = searchQuery.trim().toLowerCase()
     const list = products.filter((p) => {
@@ -48,7 +48,7 @@ const CatalogPage = () => {
     return list.sort((a, b) => {
       const scoreA = (a.is_featured ? 2 : 0) + (a.is_on_sale && a.original_price > a.price ? 1 : 0)
       const scoreB = (b.is_featured ? 2 : 0) + (b.is_on_sale && b.original_price > b.price ? 1 : 0)
-      return scoreB - scoreA // Mayor prioridad sale arriba
+      return scoreB - scoreA // Higher score sorts to the top
     })
   }, [products, selectedCategory, selectedSize, onlySales, onlyFeatured, searchQuery])
 
@@ -64,7 +64,7 @@ const CatalogPage = () => {
 
   return (
     <div className='min-h-screen bg-gray-950 font-sans'>
-      {/* Navbar Superior de Lujo con cinta de anuncios, buscador y bolsa */}
+      {/* Top Luxury Navbar with Announcement Ticker, Search, and Cart Access */}
       <Navbar
         storeName={storeName}
         searchQuery={searchQuery}
@@ -78,7 +78,7 @@ const CatalogPage = () => {
         featuredCount={featuredProducts.length}
       />
 
-      {/* Hero banner minimalista */}
+      {/* Minimalist Hero Banner */}
       <div className='relative overflow-hidden bg-gradient-to-br from-gray-900 via-gray-950 to-brand-900/20 py-8 md:py-14'>
         <div className='page-container text-center relative z-10'>
           <p className='text-brand-400 text-xs font-semibold tracking-widest uppercase mb-2.5'>
@@ -91,11 +91,11 @@ const CatalogPage = () => {
             Prendas seleccionadas con atención exclusiva. Envíanos tu pedido directo por WhatsApp sin registros.
           </p>
         </div>
-        {/* Decoracion de fondo */}
+        {/* Background glow decoration */}
         <div className='absolute top-0 left-1/2 -translate-x-1/2 w-96 h-96 bg-brand-600/5 rounded-full blur-3xl' />
       </div>
 
-      {/* Barra de filtros sticky */}
+      {/* Sticky Filter Bar */}
       <FilterBar
         categories={categories}
         selectedCategory={selectedCategory}
@@ -111,7 +111,7 @@ const CatalogPage = () => {
         totalVisible={filteredProducts.length}
       />
 
-      {/* Floating cart button en movil cuando hay productos */}
+      {/* Mobile floating cart button */}
       {totalItems > 0 && (
         <aside aria-label='Acceso rápido al carrito' className='fixed bottom-6 right-5 z-30 md:hidden animate-scale-in'>
           <button
@@ -130,12 +130,12 @@ const CatalogPage = () => {
         </aside>
       )}
 
-      {/* Grid de productos */}
+      {/* Main product grid */}
       <main className='page-container py-6 sm:py-8'>
-        {/* Sección destacada de Ofertas Exclusivas arriba del catálogo */}
+        {/* Promotional Offers spotlight section */}
         {saleProducts.length > 0 && !selectedCategory && !selectedSize && !onlySales && (
           <section className='mb-12 relative overflow-hidden rounded-3xl bg-gradient-to-b from-pink-950/25 via-gray-900/60 to-gray-900/40 border border-pink-500/25 p-5 sm:p-7 shadow-2xl animate-fade-in'>
-            {/* Resplandor decorativo */}
+            {/* Decorative background glow */}
             <div className='absolute -top-16 -right-16 w-72 h-72 bg-pink-500/10 rounded-full blur-3xl pointer-events-none' />
 
             <div className='relative z-10 flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-6'>
@@ -153,7 +153,7 @@ const CatalogPage = () => {
               </p>
             </div>
 
-            {/* Grid de ofertas */}
+            {/* Promotional grid */}
             <div className='grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-5 relative z-10'>
               {saleProducts.map((product) => (
                 <ProductCard key={`promo-${product.id}`} product={product} />
@@ -162,7 +162,7 @@ const CatalogPage = () => {
           </section>
         )}
 
-        {/* Separador de catálogo si la sección de ofertas está arriba */}
+        {/* Section divider when offers section is present */}
         {saleProducts.length > 0 && !selectedCategory && !selectedSize && !onlySales && (
           <div className='flex items-center justify-between pb-4 border-b border-gray-800/80 mb-6'>
             <div>
@@ -182,7 +182,7 @@ const CatalogPage = () => {
         <ProductGrid products={filteredProducts} loading={loading} />
       </main>
 
-      {/* Footer elegante */}
+      {/* Elegant footer */}
       <footer className='border-t border-gray-800/80 bg-gray-950 py-10 mt-12 text-center'>
         <div className='page-container space-y-4'>
           <h3 className='font-display text-lg font-bold text-gray-200 tracking-wide'>
@@ -204,7 +204,7 @@ const CatalogPage = () => {
         </div>
       </footer>
 
-      {/* Carrito lateral */}
+      {/* Slide-out cart drawer */}
       <CartDrawer />
     </div>
   )

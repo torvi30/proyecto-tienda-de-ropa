@@ -9,10 +9,10 @@ const HowToBuyModal = ({ isOpen, onClose }) => {
         className='relative w-full max-w-lg max-h-[92vh] overflow-y-auto bg-gray-900 border border-gray-800 rounded-3xl p-5 sm:p-8 shadow-2xl font-sans'
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Glow de fondo */}
+        {/* Ambient background glow */}
         <div className='absolute -top-20 -right-20 w-52 h-52 bg-brand-600/15 rounded-full blur-3xl pointer-events-none' />
 
-        {/* Boton cerrar */}
+        {/* Close modal button */}
         <button
           onClick={onClose}
           className='absolute top-5 right-5 p-2 text-gray-400 hover:text-gray-100 hover:bg-gray-800 rounded-full transition-colors'
@@ -21,7 +21,7 @@ const HowToBuyModal = ({ isOpen, onClose }) => {
           <X size={20} />
         </button>
 
-        {/* Encabezado */}
+        {/* Modal header */}
         <div className='text-center mb-7'>
           <div className='inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-500/10 border border-brand-500/20 text-brand-300 text-xs font-semibold uppercase tracking-wider mb-2'>
             <Sparkles size={14} className='text-brand-400' />
@@ -35,7 +35,7 @@ const HowToBuyModal = ({ isOpen, onClose }) => {
           </p>
         </div>
 
-        {/* Pasos visuales */}
+        {/* Visual step-by-step guide */}
         <div className='space-y-4 mb-8'>
           <div className='flex items-start gap-4 p-3.5 bg-gray-950/50 rounded-2xl border border-gray-800/80'>
             <div className='w-10 h-10 rounded-xl bg-brand-600/20 text-brand-400 border border-brand-500/30 flex items-center justify-center shrink-0 font-bold text-sm'>
@@ -82,7 +82,7 @@ const HowToBuyModal = ({ isOpen, onClose }) => {
           </div>
         </div>
 
-        {/* Garantías boutique */}
+        {/* Boutique guarantees & assurances */}
         <div className='grid grid-cols-2 gap-3 pt-2 pb-6 border-t border-gray-800/80 text-xs text-gray-400'>
           <div className='flex items-center gap-2'>
             <ShieldCheck size={16} className='text-brand-400 shrink-0' />
@@ -94,7 +94,7 @@ const HowToBuyModal = ({ isOpen, onClose }) => {
           </div>
         </div>
 
-        {/* Boton de accion principal */}
+        {/* Primary dismiss button */}
         <button
           onClick={onClose}
           className='w-full py-3.5 px-4 bg-gradient-to-r from-brand-600 to-purple-600 hover:from-brand-500 hover:to-purple-500 text-white font-bold rounded-2xl shadow-xl shadow-brand-600/30 transition-all duration-200 flex items-center justify-center gap-2'

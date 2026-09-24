@@ -1,6 +1,6 @@
 import { Flame } from 'lucide-react'
 
-// Badge de estado de stock con color de semáforo y soporte de urgencia estilo Shein
+// Stock status badge component with urgency indicators
 const StockBadge = ({ status }) => {
   if (status === 'low_stock') {
     return (

@@ -1,15 +1,15 @@
 // =============================================================
-// UTILIDAD DE SUBIDA A CLOUDINARY (CLIENT-SIDE)
-// Sube imágenes directamente desde el navegador vía REST API
+// CLOUDINARY CLIENT-SIDE UPLOAD UTILITY
+// Uploads images directly from browser via unsigned REST API
 // =============================================================
 
 const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || 'bchdrvef'
 const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || 'tienda_ropa'
 
 /**
- * Sube un archivo o blob (comprimido en WebP) a Cloudinary
- * @param {File|Blob} file - Archivo o Blob de imagen
- * @param {string} [fileName] - Nombre para identificar el archivo
+ * Uploads a WebP compressed image file or blob directly to Cloudinary.
+ * @param {File|Blob} file - Image file or Blob
+ * @param {string} [fileName] - Optional name identifier for the file
  * @returns {Promise<{ url: string, secure_url: string, public_id: string }>}
  */
 export const uploadToCloudinary = async (file, fileName = 'producto') => {

@@ -33,7 +33,7 @@ const AdminPage = () => {
 
   return (
     <div className='min-h-screen bg-gray-950'>
-      {/* Navbar Unificado del Panel de Administración */}
+      {/* Unified Admin Dashboard Navbar */}
       <AdminNavbar
         user={user}
         activeTab={activeTab}
@@ -42,7 +42,7 @@ const AdminPage = () => {
         productCount={products?.length || 0}
       />
 
-      {/* Contenido de cada tab */}
+      {/* Tab content view router */}
       <main className='page-container py-8'>
         {activeTab === 'metrics' && (
           <AdminMetrics onNavigateTab={setActiveTab} />

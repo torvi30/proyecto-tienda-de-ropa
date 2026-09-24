@@ -1,4 +1,4 @@
-// Spinner de carga reutilizable
+// Reusable loading spinner component
 const Spinner = ({ size = 'md', className = '' }) => {
   const sizes = {
     sm: 'w-4 h-4 border-2',

@@ -1,6 +1,6 @@
 import ProductCard from './ProductCard'
 
-// Skeleton de carga para cada tarjeta
+// Skeleton loading placeholder for each product card
 const ProductSkeleton = () => (
   <div className='bg-gray-900/80 border border-gray-800 rounded-2xl overflow-hidden animate-pulse'>
     <div className='bg-gray-800' style={{ aspectRatio: '4/5' }} />

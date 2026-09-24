@@ -31,10 +31,10 @@ const STOCK_COLORS = {
 const ProductList = ({ refreshKey }) => {
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
-  const [updating, setUpdating] = useState(null) // id del producto en proceso
+  const [updating, setUpdating] = useState(null) // Product id currently updating
   const [deleteConfirm, setDeleteConfirm] = useState(null)
-  const [editingProduct, setEditingProduct] = useState(null) // Para el modal completo
-  const [inlineEditId, setInlineEditId] = useState(null) // Para edición rápida inline
+  const [editingProduct, setEditingProduct] = useState(null) // Selected product for full edit modal
+  const [inlineEditId, setInlineEditId] = useState(null) // Product id for quick inline price editing
   const [inlinePrice, setInlinePrice] = useState('')
   const { settings } = useStore()
   const sym = settings?.currency_symbol || '$'
@@ -64,14 +64,14 @@ const ProductList = ({ refreshKey }) => {
 
   useEffect(() => { fetchProducts() }, [refreshKey])
 
-  // Iniciar edición rápida inline de precio
+  // Start inline quick price edit
   const startInlineEdit = (product, e) => {
     if (e) e.stopPropagation()
     setInlineEditId(product.id)
     setInlinePrice(product.price ? product.price.toString() : '')
   }
 
-  // Guardar precio inline
+  // Save inline price edit
   const saveInlinePrice = async (product) => {
     const numPrice = parseFloat(inlinePrice)
     if (isNaN(numPrice) || numPrice < 0) {
@@ -102,7 +102,7 @@ const ProductList = ({ refreshKey }) => {
     setUpdating(null)
   }
 
-  // Ciclar estado de stock: available -> low_stock -> sold_out -> available
+  // Cycle stock status: available -> low_stock -> sold_out -> available
   const cycleStock = async (product) => {
     const currentIdx = STOCK_CYCLE.indexOf(product.stock_status)
     const nextStatus = STOCK_CYCLE[(currentIdx + 1) % STOCK_CYCLE.length]
@@ -129,7 +129,7 @@ const ProductList = ({ refreshKey }) => {
     setUpdating(null)
   }
 
-  // Toggle visibilidad
+  // Toggle visibility state
   const toggleVisibility = async (product) => {
     const newVisible = !product.is_visible
     setUpdating(product.id)
@@ -157,7 +157,7 @@ const ProductList = ({ refreshKey }) => {
     setUpdating(null)
   }
 
-  // Toggle producto destacado (Estrella)
+  // Toggle featured product status (Star)
   const toggleFeatured = async (product) => {
     const newFeatured = !product.is_featured
     setUpdating(product.id)
@@ -185,7 +185,7 @@ const ProductList = ({ refreshKey }) => {
     setUpdating(null)
   }
 
-  // Eliminar producto
+  // Delete product
   const deleteProduct = async (product) => {
     setUpdating(product.id)
     if (db) {
@@ -235,9 +235,9 @@ const ProductList = ({ refreshKey }) => {
             ${deleteConfirm === product.id ? 'border-red-500/50' : ''}`}
         >
           <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 sm:p-4'>
-            {/* Contenedor de Imagen e Info */}
+            {/* Image and product information container */}
             <div className='flex items-center gap-3 sm:gap-4 min-w-0 flex-1'>
-              {/* Imagen miniatura */}
+              {/* Thumbnail image */}
               <div className='w-16 h-20 rounded-xl overflow-hidden shrink-0 bg-gray-700 border border-gray-700/60 shadow-md'>
                 <img
                   src={product.image_url}
@@ -246,13 +246,13 @@ const ProductList = ({ refreshKey }) => {
                 />
               </div>
 
-              {/* Info principal */}
+              {/* Main information */}
               <div className='flex-1 min-w-0'>
               <p className='text-gray-100 font-medium text-sm sm:text-base leading-snug truncate'>
                 {product.name}
               </p>
 
-              {/* Edición de precio: Inline o Normal */}
+              {/* Price editing: inline form or standard display */}
               {inlineEditId === product.id ? (
                 <form
                   onSubmit={(e) => {
@@ -329,7 +329,7 @@ const ProductList = ({ refreshKey }) => {
                 </div>
               )}
 
-              {/* Badges de tallas, stock y destacado */}
+              {/* Badges for sizing, stock status, and featured mark */}
               <div className='flex flex-wrap items-center gap-1.5 mt-1'>
                 <StockBadge status={product.stock_status} />
                 {product.is_featured && (
@@ -347,9 +347,9 @@ const ProductList = ({ refreshKey }) => {
             </div>
           </div>
 
-            {/* Acciones */}
+            {/* Action controls */}
             {deleteConfirm === product.id ? (
-              // Confirmación de borrado
+              // Delete confirmation prompt
               <div className='flex items-center justify-end gap-1.5 shrink-0 bg-red-950/30 p-1.5 rounded-xl border border-red-500/30 animate-fade-in'>
                 <span className='text-red-400 text-xs hidden sm:inline px-1 font-medium'>¿Eliminar?</span>
                 <button
@@ -375,7 +375,7 @@ const ProductList = ({ refreshKey }) => {
                   </div>
                 ) : (
                   <>
-                    {/* Botón Destacar (Estrella) */}
+                    {/* Featured toggle button (Star) */}
                     <button
                       onClick={() => toggleFeatured(product)}
                       title={product.is_featured ? 'Quitar de destacados' : 'Destacar prenda en portada (Aparece primero)'}
@@ -392,7 +392,7 @@ const ProductList = ({ refreshKey }) => {
                       />
                     </button>
 
-                    {/* Botón Editar completo (Abre Modal Elegante) */}
+                    {/* Edit button (Opens full modal) */}
                     <button
                       onClick={() => setEditingProduct(product)}
                       title='Editar precio, nombre, tallas y detalles'
@@ -403,7 +403,7 @@ const ProductList = ({ refreshKey }) => {
                       <span className='text-xs font-semibold hidden md:inline'>Editar</span>
                     </button>
 
-                    {/* Ciclar stock */}
+                    {/* Cycle stock status button */}
                     <button
                       onClick={() => cycleStock(product)}
                       title={`Stock actual: ${STOCK_LABELS[product.stock_status]} (Toca para cambiar)`}
@@ -417,7 +417,7 @@ const ProductList = ({ refreshKey }) => {
                       />
                     </button>
 
-                    {/* Toggle visibilidad */}
+                    {/* Toggle visibility button */}
                     <button
                       onClick={() => toggleVisibility(product)}
                       title={product.is_visible ? 'Visible en catálogo (Click para ocultar)' : 'Oculto (Click para mostrar)'}
@@ -430,7 +430,7 @@ const ProductList = ({ refreshKey }) => {
                       }
                     </button>
 
-                    {/* Eliminar */}
+                    {/* Delete product button */}
                     <button
                       onClick={() => setDeleteConfirm(product.id)}
                       title='Eliminar producto'
@@ -447,7 +447,7 @@ const ProductList = ({ refreshKey }) => {
         </div>
       ))}
 
-      {/* Modal elegante para edición completa */}
+      {/* Elegant full product edit modal */}
       {editingProduct && (
         <EditProductModal
           product={editingProduct}

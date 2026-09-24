@@ -25,7 +25,7 @@ const Navbar = ({
 
   return (
     <>
-      {/* 1. Barra de Anuncios Superior de Lujo */}
+      {/* 1. Top Luxury Announcement Bar */}
       <div className='bg-gradient-to-r from-brand-950 via-gray-900 to-pink-950 border-b border-gray-800/80 text-gray-300 py-1.5 px-4 text-xs select-none'>
         <div className='page-container flex items-center justify-between'>
           <div className='flex items-center gap-2 mx-auto sm:mx-0 overflow-hidden text-center'>
@@ -39,7 +39,7 @@ const Navbar = ({
             </span>
           </div>
 
-          {/* Enlace discreto a cómo comprar en la cinta superior */}
+          {/* Direct link to How to Buy modal in top ticker */}
           <button
             onClick={() => setShowHowToBuy(true)}
             className='hidden md:flex items-center gap-1 text-gray-400 hover:text-brand-300 text-xs transition-colors'
@@ -50,10 +50,10 @@ const Navbar = ({
         </div>
       </div>
 
-      {/* 2. Barra de Navegación Principal Sticky */}
+      {/* 2. Main Sticky Navigation Bar */}
       <header className='bg-gray-950/95 backdrop-blur-md border-b border-gray-800/80 sticky top-0 z-40 transition-all'>
         <div className='page-container flex items-center justify-between gap-3 py-3 sm:py-3.5'>
-          {/* Logo y Nombre de Marca */}
+          {/* Brand Logo & Name */}
           <div className='flex items-center gap-3 shrink-0'>
             <button
               onClick={() => {
@@ -82,7 +82,7 @@ const Navbar = ({
             </button>
           </div>
 
-          {/* Navegación central en desktop (Colección, Ofertas, Destacados, Guía) */}
+          {/* Desktop center navigation (Collection, Sales, Featured, How to Buy) */}
           <nav className='hidden lg:flex items-center gap-1.5'>
             <button
               onClick={() => {
@@ -134,7 +134,7 @@ const Navbar = ({
             </button>
           </nav>
 
-          {/* Buscador en Vivo (Desktop / Tablet) */}
+          {/* Live Search Input (Desktop / Tablet) */}
           <div className='hidden sm:flex items-center flex-1 max-w-xs relative mx-2'>
             <Search size={15} className='absolute left-3 text-gray-500 pointer-events-none' />
             <input
@@ -155,9 +155,9 @@ const Navbar = ({
             )}
           </div>
 
-          {/* Acciones de la derecha (Buscador móvil, Carrito, Candado Admin) */}
+          {/* Right-side actions (Mobile search toggle, Cart bag, Admin link) */}
           <div className='flex items-center gap-2 sm:gap-3 shrink-0'>
-            {/* Botón lupa en móvil */}
+            {/* Mobile search toggle button */}
             <button
               onClick={() => setMobileSearchOpen((prev) => !prev)}
               className={`p-2 rounded-xl border transition-colors sm:hidden ${
@@ -170,7 +170,7 @@ const Navbar = ({
               <Search size={17} />
             </button>
 
-            {/* ¿Cómo comprar? en móvil */}
+            {/* Mobile How to Buy button */}
             <button
               onClick={() => setShowHowToBuy(true)}
               className='p-2 rounded-xl bg-gray-900 border border-gray-800 text-gray-400 hover:text-gray-200 transition-colors md:hidden'
@@ -179,7 +179,7 @@ const Navbar = ({
               <HelpCircle size={17} />
             </button>
 
-            {/* Acceso admin discreto */}
+            {/* Discrete Admin Panel Access link */}
             <Link
               to='/login'
               id='header-admin-link'
@@ -189,7 +189,7 @@ const Navbar = ({
               <Lock size={15} />
             </Link>
 
-            {/* Botón Carrito de Compras */}
+            {/* Shopping Cart Drawer Toggle Button */}
             <button
               id='header-cart-button'
               onClick={() => setIsOpen(true)}
@@ -208,7 +208,7 @@ const Navbar = ({
           </div>
         </div>
 
-        {/* Buscador desplegable en móvil */}
+        {/* Expandable mobile search bar */}
         {mobileSearchOpen && (
           <div className='sm:hidden px-4 pb-3 pt-1 border-t border-gray-800/80 animate-fade-in'>
             <div className='relative'>
@@ -234,7 +234,7 @@ const Navbar = ({
         )}
       </header>
 
-      {/* Modal explicativo "¿Cómo Comprar?" */}
+      {/* Explanatory How to Buy modal */}
       <HowToBuyModal isOpen={showHowToBuy} onClose={() => setShowHowToBuy(false)} />
     </>
   )

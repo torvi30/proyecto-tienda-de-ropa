@@ -32,7 +32,7 @@ const useCategories = () => {
           setLoading(false)
         },
         (err) => {
-          console.error('Error al escuchar categorías de Firestore:', err)
+          console.error('Error listening to Firestore categories:', err)
           setCategories(mockCategories)
           setLoading(false)
         }
@@ -40,7 +40,7 @@ const useCategories = () => {
 
       return () => unsubscribe()
     } catch (err) {
-      console.error('Error al inicializar query de categorías:', err)
+      console.error('Error initializing categories query:', err)
       setCategories(mockCategories)
       setLoading(false)
     }

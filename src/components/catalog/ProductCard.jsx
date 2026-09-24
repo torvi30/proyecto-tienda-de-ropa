@@ -139,7 +139,7 @@ const ProductCard = ({ product }) => {
         </div>
       </div>
 
-      {/* Informacion del producto */}
+      {/* Product details and purchase options */}
       <div className='flex flex-col flex-1 p-3.5 sm:p-4 gap-3'>
         <div>
           <h3
@@ -150,7 +150,7 @@ const ProductCard = ({ product }) => {
             {product.name}
           </h3>
 
-          {/* Precios: Antes y Ahora si está en promoción */}
+          {/* Pricing: Promotional Strikethrough vs Current Price */}
           <div className='flex items-baseline flex-wrap gap-2 mt-1.5'>
             <span
               className={`font-bold text-lg sm:text-xl font-sans tracking-tight tabular-nums ${
@@ -173,7 +173,7 @@ const ProductCard = ({ product }) => {
             </p>
           )}
 
-          {/* Micro-tira de Urgencia estilo Shein */}
+          {/* Urgency ticker for low stock */}
           {product.stock_status === 'low_stock' && (
             <div className='flex items-center gap-1.5 mt-2 py-1 px-2 rounded-lg bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-transparent border border-amber-500/25 text-amber-300 text-[11px] font-semibold'>
               <Flame size={12} className='text-amber-400 fill-current shrink-0 animate-pulse' />
@@ -182,7 +182,7 @@ const ProductCard = ({ product }) => {
           )}
         </div>
 
-        {/* Selector de tallas o medidas */}
+        {/* Size / Measurement interactive chips */}
         {product.sizes && product.sizes.length > 0 && (
           <div className={`transition-all duration-300 ${highlightSize ? 'scale-[1.02] bg-brand-500/10 p-1.5 rounded-xl border border-brand-500/40' : ''}`}>
             <div className='flex items-center justify-between mb-1.5'>
@@ -214,7 +214,7 @@ const ProductCard = ({ product }) => {
           </div>
         )}
 
-        {/* Boton de agregar al carrito unificado y responsive */}
+        {/* Unified add-to-bag button */}
         <button
           onClick={handleAddToCart}
           id={`add-to-cart-${product.id}`}

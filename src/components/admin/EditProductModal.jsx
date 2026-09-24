@@ -25,7 +25,7 @@ const EditProductModal = ({ product, onClose, onSaveSuccess }) => {
   const [isVisible, setIsVisible] = useState(product?.is_visible ?? true)
   const [saving, setSaving] = useState(false)
 
-  // Cálculo en tiempo real de descuento
+  // Real-time discount calculation
   const numPrice = parseFloat(price) || 0
   const numOrigPrice = parseFloat(originalPrice) || 0
   const hasDiscount = isOnSale && numOrigPrice > numPrice && numPrice > 0
@@ -34,7 +34,7 @@ const EditProductModal = ({ product, onClose, onSaveSuccess }) => {
     : 0
   const savings = hasDiscount ? numOrigPrice - numPrice : 0
 
-  // Creación rápida de categoría
+  // Quick inline category creation state
   const [showNewCat, setShowNewCat] = useState(false)
   const [newCatName, setNewCatName] = useState('')
   const [creatingCat, setCreatingCat] = useState(false)
@@ -105,7 +105,7 @@ const EditProductModal = ({ product, onClose, onSaveSuccess }) => {
     }
   }
 
-  // Creación rápida de categoría
+  // Quick inline category creation handler
   const handleQuickCreateCategory = async (e) => {
     if (e) e.preventDefault()
     const trimmed = newCatName.trim()
@@ -148,10 +148,10 @@ const EditProductModal = ({ product, onClose, onSaveSuccess }) => {
         className='relative w-full max-w-lg max-h-[92vh] flex flex-col bg-gray-900 border border-gray-800 rounded-3xl p-5 sm:p-7 shadow-2xl overflow-hidden font-sans'
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Glow sutil de fondo */}
+        {/* Ambient background glow */}
         <div className='absolute -top-24 -right-24 w-60 h-60 bg-brand-600/10 rounded-full blur-3xl pointer-events-none' />
 
-        {/* Encabezado del modal */}
+        {/* Modal header */}
         <div className='relative flex items-center justify-between pb-4 sm:pb-5 border-b border-gray-800/80 mb-4 sm:mb-5 shrink-0'>
           <div className='flex items-center gap-3.5 min-w-0'>
             <div className='w-12 h-14 rounded-xl overflow-hidden bg-gray-800 border border-gray-700/60 shrink-0 shadow-sm'>
@@ -181,9 +181,9 @@ const EditProductModal = ({ product, onClose, onSaveSuccess }) => {
           </button>
         </div>
 
-        {/* Formulario con scroll vertical para pantallas pequeñas */}
+        {/* Scrollable modal form container */}
         <form onSubmit={handleSubmit} className='relative space-y-4 overflow-y-auto pr-1'>
-          {/* Toggle y configuración de Promoción / Oferta */}
+          {/* Promotional discount configuration toggle */}
           <div className='bg-gradient-to-r from-pink-500/10 via-purple-500/10 to-transparent border border-pink-500/25 rounded-2xl p-3.5 space-y-3'>
             <div className='flex items-center justify-between'>
               <div className='flex items-center gap-2.5'>
@@ -215,11 +215,11 @@ const EditProductModal = ({ product, onClose, onSaveSuccess }) => {
               </button>
             </div>
 
-            {/* Inputs de precios: Si está en promoción, muestra Antes y Ahora */}
+            {/* Price inputs: Regular vs Promotional Price */}
             {isOnSale ? (
               <div className='pt-2 border-t border-pink-500/20 space-y-3 animate-fade-in'>
                 <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
-                  {/* Precio anterior tachado */}
+                  {/* Strikethrough original price */}
                   <div>
                     <label className='text-gray-400 text-xs font-semibold uppercase tracking-wider block mb-1'>
                       Precio Normal (Antes)
@@ -240,7 +240,7 @@ const EditProductModal = ({ product, onClose, onSaveSuccess }) => {
                     </div>
                   </div>
 
-                  {/* Precio oferta actual */}
+                  {/* Current discounted price */}
                   <div>
                     <label className='text-pink-400 text-xs font-semibold uppercase tracking-wider block mb-1'>
                       Precio Oferta (Ahora) *
@@ -264,7 +264,7 @@ const EditProductModal = ({ product, onClose, onSaveSuccess }) => {
                   </div>
                 </div>
 
-                {/* Banner de cálculo en vivo */}
+                {/* Live discount calculation banner */}
                 {hasDiscount && (
                   <div className='flex items-center justify-between bg-pink-500/15 border border-pink-500/30 rounded-xl px-3.5 py-2 text-xs'>
                     <span className='text-pink-300 font-bold flex items-center gap-1.5'>
@@ -278,7 +278,7 @@ const EditProductModal = ({ product, onClose, onSaveSuccess }) => {
                 )}
               </div>
             ) : (
-              /* Precio normal único */
+              /* Single standard price */
               <div className='pt-1'>
                 <div className='relative rounded-2xl bg-gray-950/70 border border-gray-700 focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500/20 transition-all px-4 py-2 flex items-center'>
                   <span className='text-brand-400 font-semibold text-2xl mr-2 select-none'>
@@ -305,7 +305,7 @@ const EditProductModal = ({ product, onClose, onSaveSuccess }) => {
             )}
           </div>
 
-          {/* Nombre de la prenda */}
+          {/* Garment name */}
           <div>
             <label className='text-gray-300 text-xs font-semibold uppercase tracking-wider block mb-1.5 flex items-center gap-1.5'>
               <Tag size={13} className='text-gray-400' />
@@ -321,7 +321,7 @@ const EditProductModal = ({ product, onClose, onSaveSuccess }) => {
             />
           </div>
 
-          {/* Categoría */}
+          {/* Category select & quick-add */}
           <div>
             <div className='flex items-center justify-between mb-1.5'>
               <label className='text-gray-300 text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5'>
@@ -393,10 +393,10 @@ const EditProductModal = ({ product, onClose, onSaveSuccess }) => {
             )}
           </div>
 
-          {/* Tallas / Medidas / Tamaños disponibles */}
+          {/* Sizing and measurement chips */}
           <SizeMeasurePicker selected={sizes} onChange={setSizes} label='Tallas / Medidas / Tamaños' />
 
-          {/* Toggle Destacar Prenda */}
+          {/* Featured garment highlight toggle */}
           <div className='flex items-center justify-between p-3.5 rounded-2xl bg-amber-400/10 border border-amber-400/25'>
             <div className='flex items-center gap-2.5'>
               <div className='w-8 h-8 rounded-lg bg-amber-400/20 border border-amber-400/30 flex items-center justify-center text-amber-400 shrink-0'>
@@ -427,7 +427,7 @@ const EditProductModal = ({ product, onClose, onSaveSuccess }) => {
             </button>
           </div>
 
-          {/* Estado de stock y Visibilidad */}
+          {/* Stock status and catalog visibility */}
           <div className='grid grid-cols-2 gap-3 pt-1'>
             <div>
               <label className='text-gray-400 text-xs font-semibold uppercase tracking-wider block mb-1.5'>
@@ -462,7 +462,7 @@ const EditProductModal = ({ product, onClose, onSaveSuccess }) => {
             </div>
           </div>
 
-          {/* Botones de acción */}
+          {/* Action buttons */}
           <div className='flex items-center justify-end gap-3 pt-4 border-t border-gray-800/80 mt-2'>
             <button
               type='button'

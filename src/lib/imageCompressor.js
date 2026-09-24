@@ -1,28 +1,28 @@
 // =============================================================
-// IMAGE COMPRESSOR — Compresion Client-Side a WebP
+// IMAGE COMPRESSOR — Client-Side WebP Compression
 // =============================================================
-// Convierte cualquier imagen (JPG, PNG, HEIC*) a WebP
-// con el ratio de moda 4:5 (1080x1350 px) y maximo 150KB
-// TODO el procesamiento ocurre en el navegador del usuario.
-// NINGUN byte de la imagen original llega al servidor.
+// Converts any image (JPG, PNG, HEIC*) to WebP format
+// using standard 4:5 fashion aspect ratio (1080x1350 px) and max 150KB.
+// ALL processing runs client-side in the user's browser.
+// NO uncompressed raw bytes are sent to the server.
 // =============================================================
 
-/** Configuracion de compresion */
+/** Compression configuration */
 const CONFIG = {
   targetWidth: 1080,
-  targetHeight: 1350,     // Ratio 4:5 vertical — estandar de Instagram/boutiques
-  maxFileSizeKB: 150,     // Limite maximo en kilobytes
-  initialQuality: 0.85,   // Calidad WebP inicial (0-1)
-  minQuality: 0.40,       // Calidad minima permitida antes de rechazar
-  qualityStep: 0.05,      // Paso de reduccion de calidad por iteracion
+  targetHeight: 1350,     // 4:5 vertical ratio — Instagram/boutique standard
+  maxFileSizeKB: 150,     // Maximum file size target in kilobytes
+  initialQuality: 0.85,   // Initial WebP quality (0-1)
+  minQuality: 0.40,       // Minimum acceptable quality floor
+  qualityStep: 0.05,      // Quality reduction step per iteration
 }
 
 /**
- * Comprime y convierte una imagen File a WebP con ratio 4:5.
- * Aplica cover-fit: recorta el centro de la imagen para llenar el marco.
+ * Compresses and converts an image File into WebP with 4:5 aspect ratio.
+ * Applies cover-fit to center and crop the image cleanly.
  *
- * @param {File} file - Archivo de imagen original
- * @param {Object} options - Opciones opcionales para sobreescribir CONFIG
+ * @param {File} file - Original image file
+ * @param {Object} options - Optional configuration overrides
  * @returns {Promise<{ blob: Blob, previewUrl: string, originalSizeKB: number, compressedSizeKB: number }>}
  */
 export const compressImage = (file, options = {}) => {
@@ -45,37 +45,37 @@ export const compressImage = (file, options = {}) => {
 
         const ctx = canvas.getContext('2d')
 
-        // --- Cover-fit: centrar y recortar para llenar 4:5 ---
+        // --- Cover-fit: center and crop to fill 4:5 ratio ---
         const srcRatio    = img.width / img.height
         const targetRatio = cfg.targetWidth / cfg.targetHeight
 
         let sx = 0, sy = 0, sw = img.width, sh = img.height
 
         if (srcRatio > targetRatio) {
-          // La imagen es mas ancha que el objetivo: recortar los lados
+          // Source image is wider than target: crop left and right
           sw = img.height * targetRatio
           sx = (img.width - sw) / 2
         } else {
-          // La imagen es mas alta que el objetivo: recortar arriba/abajo
+          // Source image is taller than target: crop top and bottom
           sh = img.width / targetRatio
           sy = (img.height - sh) / 2
         }
 
         ctx.drawImage(img, sx, sy, sw, sh, 0, 0, cfg.targetWidth, cfg.targetHeight)
 
-        // --- Reduccion iterativa de calidad hasta llegar al limite de KB ---
+        // --- Iterative quality reduction until reaching target file size ---
         let quality = cfg.initialQuality
         let blob    = null
 
         const compress = () => {
           canvas.toBlob(
             (result) => {
-              if (!result) return reject(new Error('No se pudo comprimir la imagen.'))
+              if (!result) return reject(new Error('Failed to compress image.'))
 
               const sizeKB = result.size / 1024
 
               if (sizeKB <= cfg.maxFileSizeKB || quality <= cfg.minQuality) {
-                // Tamaño aceptable o calidad minima alcanzada
+                // Target file size or minimum quality floor reached
                 blob = result
                 const previewUrl = URL.createObjectURL(blob)
                 resolve({
@@ -86,7 +86,7 @@ export const compressImage = (file, options = {}) => {
                   quality: Math.round(quality * 100),
                 })
               } else {
-                // Reducir calidad y reintentar
+                // Reduce quality and retry iteratively
                 quality = Math.max(quality - cfg.qualityStep, cfg.minQuality)
                 compress()
               }
@@ -99,21 +99,21 @@ export const compressImage = (file, options = {}) => {
         compress()
       }
 
-      img.onerror = () => reject(new Error(`No se pudo cargar la imagen "${file.name}".`))
+      img.onerror = () => reject(new Error(`Failed to load image "${file.name}".`))
       img.src = e.target.result
     }
 
-    reader.onerror = () => reject(new Error(`Error al leer el archivo "${file.name}".`))
+    reader.onerror = () => reject(new Error(`Failed to read file "${file.name}".`))
     reader.readAsDataURL(file)
   })
 }
 
 /**
- * Comprime un array de archivos en paralelo.
- * Retorna resultados exitosos y errores separados.
+ * Compresses an array of files in parallel.
+ * Returns successful results and errors separately.
  *
- * @param {File[]} files - Array de archivos a comprimir
- * @param {Function} onProgress - Callback (completados, total) para mostrar progreso
+ * @param {File[]} files - Array of files to compress
+ * @param {Function} onProgress - Progress callback (completed, total)
  * @returns {Promise<{ results: Array, errors: Array }>}
  */
 export const compressImageBatch = async (files, onProgress = null) => {
@@ -138,10 +138,10 @@ export const compressImageBatch = async (files, onProgress = null) => {
 }
 
 /**
- * Libera la URL de objeto creada por URL.createObjectURL()
- * Llamar despues de que la imagen ya no sea necesaria en el DOM.
+ * Revokes an object URL created by URL.createObjectURL()
+ * Call after the preview image is no longer needed in the DOM.
  *
- * @param {string} url - URL de objeto a liberar
+ * @param {string} url - Object URL to revoke
  */
 export const revokePreviewUrl = (url) => {
   if (url && url.startsWith('blob:')) {
