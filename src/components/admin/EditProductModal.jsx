@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import {
-  X, Check, Loader2, Sparkles, Tag, DollarSign,
-  Layers, Plus, Flame, Percent, Star, ImagePlus, Undo2,
-  ZoomIn, Eye, EyeOff, CheckCircle2
+  X, Check, Loader2, Sparkles, Plus, Flame, Star,
+  ImagePlus, Undo2, ZoomIn, Eye, EyeOff, CheckCircle2,
+  Trash2, Images
 } from 'lucide-react'
 import { db } from '../../lib/firebaseClient'
 import { doc, updateDoc, collection, addDoc, serverTimestamp } from 'firebase/firestore'
@@ -14,15 +14,27 @@ import { uploadToCloudinary } from '../../lib/cloudinary'
 import SizeMeasurePicker from './SizeMeasurePicker'
 import ImageZoomModal from '../shared/ImageZoomModal'
 
+const MAX_PHOTOS = 5
+
 const STOCK_OPTIONS = [
   { value: 'available', label: 'Disponible', color: 'text-green-400', border: 'border-green-500/40', bg: 'bg-green-500/10' },
   { value: 'low_stock', label: 'Pocas unidades', color: 'text-yellow-400', border: 'border-yellow-500/40', bg: 'bg-yellow-500/10' },
   { value: 'sold_out', label: 'Agotado (Oculto)', color: 'text-red-400', border: 'border-red-500/40', bg: 'bg-red-500/10' },
 ]
 
+const generateId = () => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+  return `photo_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+}
+
 const EditProductModal = ({ product, onClose, onSaveSuccess }) => {
+  const fileInputRef = useRef(null)
+  const replaceCoverRef = useRef(null)
   const { settings } = useStore()
-  const { categories } = useCategories()
+  const { categories = [] } = useCategories()
+  const { compress } = useImageCompressor()
   const sym = settings?.currency_symbol || '$'
 
   const [name, setName] = useState(product?.name || '')
@@ -38,6 +50,22 @@ const EditProductModal = ({ product, onClose, onSaveSuccess }) => {
   const [isVisible, setIsVisible] = useState(product?.is_visible ?? true)
   const [saving, setSaving] = useState(false)
   const [showZoomModal, setShowZoomModal] = useState(false)
+  const [zoomInitialIndex, setZoomInitialIndex] = useState(0)
+
+  // Multi-image state: array of { id, url, blob, previewUrl, isNew: boolean }
+  const [photoList, setPhotoList] = useState(() => {
+    const initialUrls = Array.isArray(product?.images) && product.images.length > 0
+      ? product.images.filter(Boolean)
+      : (product?.image_url ? [product.image_url] : [])
+
+    return initialUrls.map((url, i) => ({
+      id: `existing_${i}_${Date.now()}`,
+      url,
+      blob: null,
+      previewUrl: url,
+      isNew: false,
+    }))
+  })
 
   // Real-time discount calculation
   const numPrice = parseFloat(price) || 0
@@ -53,42 +81,76 @@ const EditProductModal = ({ product, onClose, onSaveSuccess }) => {
   const [newCatName, setNewCatName] = useState('')
   const [creatingCat, setCreatingCat] = useState(false)
 
-  // Cambio de foto para el producto existente
-  const [newImageFile, setNewImageFile] = useState(null)
-  const [newImagePreview, setNewImagePreview] = useState(null)
-  const [compressingImage, setCompressingImage] = useState(false)
-  const { compress } = useImageCompressor()
-
-  const handleSelectNewImage = async (e) => {
+  // Add a new photo to the garment gallery
+  const handleAddPhoto = async (e, replaceCover = false) => {
     const file = e.target.files?.[0]
     if (!file) return
+
     if (!file.type || !file.type.startsWith('image/')) {
       toast.error('Selecciona una imagen válida (JPG, PNG, WebP)')
       return
     }
 
-    setCompressingImage(true)
-    const toastId = toast.loading('Comprimiendo nueva foto a WebP...')
+    if (photoList.length >= MAX_PHOTOS && !replaceCover) {
+      toast.error(`Máximo ${MAX_PHOTOS} fotos por prenda`)
+      return
+    }
+
+    const toastId = toast.loading('Comprimiendo nueva foto a WebP 4:5...')
     try {
       const res = await compress(file)
-      if (newImagePreview) URL.revokeObjectURL(newImagePreview)
-      setNewImageFile(res.blob || file)
-      setNewImagePreview(res.previewUrl)
-      toast.success('Nueva foto lista para guardar', { id: toastId, icon: '✨' })
+      const newItem = {
+        id: generateId(),
+        url: null,
+        blob: res.blob,
+        previewUrl: res.previewUrl,
+        isNew: true,
+      }
+
+      if (replaceCover && photoList.length > 0) {
+        if (photoList[0].isNew && photoList[0].previewUrl) {
+          URL.revokeObjectURL(photoList[0].previewUrl)
+        }
+        setPhotoList((prev) => [newItem, ...prev.slice(1)])
+        toast.success('¡Foto de portada actualizada!', { id: toastId, icon: '⭐' })
+      } else {
+        setPhotoList((prev) => [...prev, newItem])
+        toast.success(`¡Foto ${photoList.length + 1} agregada a la prenda!`, { id: toastId, icon: '✨' })
+      }
     } catch (err) {
       console.error(err)
       toast.error('Error al procesar la foto', { id: toastId })
     } finally {
-      setCompressingImage(false)
       e.target.value = ''
     }
   }
 
-  const handleRevertImage = () => {
-    if (newImagePreview) URL.revokeObjectURL(newImagePreview)
-    setNewImageFile(null)
-    setNewImagePreview(null)
-    toast('Se restauró la foto original', { icon: '↩️' })
+  // Set any photo as the main cover photo (moves it to position 0)
+  const handleSetAsCover = (index) => {
+    if (index === 0) return
+    setPhotoList((prev) => {
+      const copy = [...prev]
+      const [target] = copy.splice(index, 1)
+      copy.unshift(target)
+      return copy
+    })
+    toast.success('⭐ ¡Esta foto ahora es la Portada Principal!', { icon: '⭐' })
+  }
+
+  // Remove a photo from the gallery
+  const handleRemovePhoto = (index) => {
+    if (photoList.length <= 1) {
+      toast.error('La prenda debe tener al menos una foto')
+      return
+    }
+    setPhotoList((prev) => {
+      const target = prev[index]
+      if (target?.isNew && target.previewUrl) {
+        URL.revokeObjectURL(target.previewUrl)
+      }
+      return prev.filter((_, i) => i !== index)
+    })
+    toast('Foto eliminada de la prenda', { icon: '🗑️' })
   }
 
   if (!product) return null
@@ -107,61 +169,60 @@ const EditProductModal = ({ product, onClose, onSaveSuccess }) => {
       return
     }
 
-    setSaving(true)
-
-    const origPriceNum = parseFloat(originalPrice)
-    const validOrigPrice = isOnSale && !isNaN(origPriceNum) && origPriceNum > 0 ? origPriceNum : null
-
-    // Subir nueva foto a Cloudinary si se seleccionó una
-    let finalImageUrl = product.image_url
-    if (newImageFile) {
-      try {
-        const uploadRes = await uploadToCloudinary(newImageFile, name.trim())
-        finalImageUrl = uploadRes.secure_url
-      } catch (err) {
-        console.error('Error subiendo nueva imagen:', err)
-        toast.error('Error al subir la nueva imagen a la nube')
-        setSaving(false)
-        return
-      }
+    if (photoList.length === 0) {
+      toast.error('La prenda debe tener al menos una foto')
+      return
     }
 
+    setSaving(true)
+    const toastId = toast.loading('Guardando cambios y subiendo fotos nuevas...')
+
     try {
-      if (db) {
-        await updateDoc(doc(db, 'products', product.id), {
-          name: name.trim(),
-          price: parsedPrice,
-          original_price: validOrigPrice,
-          is_on_sale: Boolean(isOnSale && validOrigPrice && validOrigPrice > parsedPrice),
-          is_featured: Boolean(isFeatured),
-          category_id: categoryId || null,
-          sizes,
-          image_url: finalImageUrl,
-          stock_status: stockStatus,
-          is_visible: isVisible,
-        })
+      // 1. Subir fotos nuevas a Cloudinary y recopilar URLs finales en orden estricto
+      const finalUrls = []
+      for (let i = 0; i < photoList.length; i++) {
+        const item = photoList[i]
+        if (!item.isNew && item.url) {
+          finalUrls.push(item.url)
+        } else if (item.isNew && item.blob) {
+          const role = i === 0 ? 'portada' : `angulo-${i + 1}`
+          const uploadRes = await uploadToCloudinary(item.blob, `${name.trim()}-${role}`)
+          finalUrls.push(uploadRes.secure_url)
+        }
       }
 
-      toast.success('Producto actualizado con éxito', { icon: '✓' })
+      const origPriceNum = parseFloat(originalPrice)
+      const validOrigPrice = isOnSale && !isNaN(origPriceNum) && origPriceNum > 0 ? origPriceNum : null
+
+      const updatedPayload = {
+        name: name.trim(),
+        price: parsedPrice,
+        original_price: validOrigPrice,
+        is_on_sale: Boolean(isOnSale && validOrigPrice && validOrigPrice > parsedPrice),
+        is_featured: Boolean(isFeatured),
+        category_id: categoryId || null,
+        sizes,
+        image_url: finalUrls[0], // Foto principal / portada
+        images: finalUrls,       // Todas las fotos de la galería
+        stock_status: stockStatus,
+        is_visible: isVisible,
+      }
+
+      if (db) {
+        await updateDoc(doc(db, 'products', product.id), updatedPayload)
+      }
+
+      toast.success('¡Prenda actualizada con éxito! 🎉', { id: toastId })
       if (onSaveSuccess) {
         onSaveSuccess({
           ...product,
-          name: name.trim(),
-          price: parsedPrice,
-          original_price: validOrigPrice,
-          is_on_sale: Boolean(isOnSale && validOrigPrice && validOrigPrice > parsedPrice),
-          is_featured: Boolean(isFeatured),
-          category_id: categoryId || null,
-          sizes,
-          image_url: finalImageUrl,
-          stock_status: stockStatus,
-          is_visible: isVisible,
+          ...updatedPayload,
         })
       }
       onClose()
     } catch (err) {
       console.error('Error al actualizar producto:', err)
-      toast.error('Error al guardar los cambios en Firestore')
+      toast.error('Error al guardar los cambios', { id: toastId })
     } finally {
       setSaving(false)
     }
@@ -204,10 +265,27 @@ const EditProductModal = ({ product, onClose, onSaveSuccess }) => {
     }
   }
 
-  const currentDisplayImage = newImagePreview || product.image_url
+  const mainPhoto = photoList[0] || null
+  const additionalPhotos = photoList.slice(1)
 
   return (
     <div className='fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-gray-950/85 backdrop-blur-md animate-fade-in'>
+      {/* Hidden file inputs */}
+      <input
+        ref={replaceCoverRef}
+        type='file'
+        accept='image/*'
+        className='hidden'
+        onChange={(e) => handleAddPhoto(e, true)}
+      />
+      <input
+        ref={fileInputRef}
+        type='file'
+        accept='image/*'
+        className='hidden'
+        onChange={(e) => handleAddPhoto(e, false)}
+      />
+
       <div
         className='relative w-full max-w-lg max-h-[94vh] flex flex-col bg-gray-900 border border-gray-800 rounded-3xl shadow-2xl overflow-hidden font-sans'
         onClick={(e) => e.stopPropagation()}
@@ -233,7 +311,7 @@ const EditProductModal = ({ product, onClose, onSaveSuccess }) => {
 
           <button
             onClick={onClose}
-            className='p-2 text-gray-400 hover:text-gray-100 hover:bg-gray-800 rounded-xl transition-colors shrink-0'
+            className='p-2 text-gray-400 hover:text-gray-100 hover:bg-gray-800 rounded-xl transition-colors shrink-0 cursor-pointer'
             title='Cerrar'
           >
             <X size={20} />
@@ -242,77 +320,157 @@ const EditProductModal = ({ product, onClose, onSaveSuccess }) => {
 
         {/* Scrollable form body */}
         <form onSubmit={handleSubmit} className='flex-1 overflow-y-auto p-4 sm:p-6 space-y-5'>
-          {/* SECTION 1: PROMINENT VISUAL PHOTO CARD */}
-          <div className='bg-gray-950/70 p-4 rounded-2xl border border-gray-800/80 flex flex-col items-center'>
-            <div className='flex items-center justify-between w-full mb-3'>
-              <span className='text-gray-400 text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5'>
-                <ImagePlus size={14} className='text-brand-400' />
-                <span>Foto de la prenda</span>
+          {/* SECTION 1: MULTI-PHOTO GALLERY & COVER MANAGER */}
+          <div className='bg-gray-950/70 p-4 sm:p-5 rounded-2xl border border-gray-800/80 space-y-4'>
+            <div className='flex items-center justify-between'>
+              <span className='text-gray-300 text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5'>
+                <Images size={14} className='text-brand-400' />
+                <span>Fotos de la prenda ({photoList.length}/{MAX_PHOTOS})</span>
               </span>
               <button
                 type='button'
-                onClick={() => setShowZoomModal(true)}
-                className='text-xs text-brand-400 hover:text-brand-300 flex items-center gap-1 font-medium'
+                onClick={() => {
+                  setZoomInitialIndex(0)
+                  setShowZoomModal(true)
+                }}
+                className='text-xs text-brand-400 hover:text-brand-300 flex items-center gap-1 font-medium cursor-pointer'
               >
                 <ZoomIn size={13} />
-                <span>Ver en pantalla completa</span>
+                <span>Ver en grande</span>
               </button>
             </div>
 
-            {/* 4:5 Vertical photo card */}
-            <div
-              onClick={() => setShowZoomModal(true)}
-              className='relative w-40 sm:w-48 aspect-[4/5] rounded-2xl overflow-hidden bg-gray-800 border-2 border-gray-700/80 shadow-2xl cursor-pointer group/photo select-none'
-              title='Toca para ampliar'
-            >
-              <img
-                src={currentDisplayImage}
-                alt={name || product.name}
-                className='w-full h-full object-cover transition-transform duration-300 group-hover/photo:scale-105'
-              />
+            {/* Main Cover Photo Showcase */}
+            {mainPhoto && (
+              <div className='flex flex-col items-center'>
+                <div className='relative w-40 sm:w-48 aspect-[4/5] rounded-2xl overflow-hidden bg-gray-800 border-2 border-amber-400 shadow-2xl group/photo select-none'>
+                  <img
+                    src={mainPhoto.previewUrl}
+                    alt='Portada'
+                    className='w-full h-full object-cover transition-transform duration-300 group-hover/photo:scale-105'
+                  />
 
-              {/* Hover overlay hint */}
-              <div className='absolute inset-0 bg-black/40 opacity-0 group-hover/photo:opacity-100 transition-opacity flex flex-col items-center justify-center text-white gap-1'>
-                <ZoomIn size={22} className='text-brand-300' />
-                <span className='text-xs font-semibold'>Zoom HD</span>
+                  {/* Golden Cover Badge */}
+                  <div className='absolute top-2.5 inset-x-2 flex items-center justify-between pointer-events-none'>
+                    <span className='inline-flex items-center gap-1 bg-amber-400 text-gray-950 font-bold text-[10px] px-2.5 py-0.5 rounded-full shadow-lg shadow-amber-400/30 uppercase tracking-wider'>
+                      <Star size={11} className='fill-current' />
+                      <span>Portada Principal</span>
+                    </span>
+                    {mainPhoto.isNew && (
+                      <span className='bg-emerald-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow'>
+                        Nueva ✓
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Zoom Overlay */}
+                  <div
+                    onClick={() => {
+                      setZoomInitialIndex(0)
+                      setShowZoomModal(true)
+                    }}
+                    className='absolute inset-0 bg-black/40 opacity-0 group-hover/photo:opacity-100 transition-opacity flex flex-col items-center justify-center text-white gap-1 cursor-pointer'
+                  >
+                    <ZoomIn size={22} className='text-brand-300' />
+                    <span className='text-xs font-semibold'>Zoom HD</span>
+                  </div>
+                </div>
+
+                <div className='flex items-center gap-2 mt-3'>
+                  <button
+                    type='button'
+                    onClick={() => replaceCoverRef.current?.click()}
+                    className='py-2 px-3.5 bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 rounded-xl text-xs font-medium flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer'
+                  >
+                    <ImagePlus size={14} />
+                    <span>Cambiar portada</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Additional Angles Strip */}
+            <div className='border-t border-gray-800/80 pt-3.5'>
+              <div className='flex items-center justify-between mb-2.5'>
+                <span className='text-gray-400 text-xs font-medium'>
+                  Ángulos adicionales ({additionalPhotos.length} / {MAX_PHOTOS - 1})
+                </span>
+                <span className='text-[11px] text-gray-500'>
+                  Espalda, detalle o puesta
+                </span>
               </div>
 
-              {/* Badge for new image */}
-              {newImagePreview && (
-                <div className='absolute bottom-2 inset-x-2 bg-emerald-600 text-white text-[10px] font-bold py-1 px-2 rounded-lg text-center shadow-lg animate-scale-in'>
-                  ✨ Nueva foto lista
-                </div>
-              )}
-            </div>
+              <div className='grid grid-cols-2 sm:grid-cols-4 gap-2.5'>
+                {additionalPhotos.map((item, idx) => {
+                  const actualIndex = idx + 1
+                  return (
+                    <div
+                      key={item.id}
+                      className='bg-gray-900 border border-gray-800 rounded-xl p-2 flex flex-col items-center text-center space-y-1.5 relative group/thumb'
+                    >
+                      <div
+                        onClick={() => {
+                          setZoomInitialIndex(actualIndex)
+                          setShowZoomModal(true)
+                        }}
+                        className='w-full aspect-[4/5] rounded-lg overflow-hidden bg-gray-800 cursor-pointer relative shadow-sm'
+                      >
+                        <img
+                          src={item.previewUrl}
+                          alt={`Foto ${actualIndex + 1}`}
+                          className='w-full h-full object-cover'
+                        />
+                        {item.isNew && (
+                          <span className='absolute bottom-1 right-1 bg-emerald-600 text-white text-[8px] px-1 rounded font-bold'>
+                            Nueva
+                          </span>
+                        )}
+                      </div>
 
-            {/* Photo action buttons */}
-            <div className='flex flex-wrap items-center justify-center gap-2 mt-3.5 w-full'>
-              <label className='flex-1 max-w-xs py-2.5 px-4 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-95 shadow-md shadow-brand-600/25'>
-                <ImagePlus size={15} />
-                <span>{newImagePreview ? 'Elegir otra foto' : 'Cambiar foto de prenda'}</span>
-                <input
-                  type='file'
-                  accept='image/*'
-                  className='hidden'
-                  onChange={handleSelectNewImage}
-                />
-              </label>
+                      {/* Make Cover / Delete buttons */}
+                      <div className='w-full flex items-center justify-between gap-1'>
+                        <button
+                          type='button'
+                          onClick={() => handleSetAsCover(actualIndex)}
+                          className='flex-1 py-1 px-1 bg-amber-400/15 hover:bg-amber-400/25 border border-amber-400/30 text-amber-300 rounded-lg text-[10px] font-bold flex items-center justify-center gap-0.5 transition-all active:scale-95 cursor-pointer'
+                          title='Poner de portada'
+                        >
+                          <Star size={9} className='fill-current' />
+                          <span>Portada</span>
+                        </button>
+                        <button
+                          type='button'
+                          onClick={() => handleRemovePhoto(actualIndex)}
+                          className='p-1 bg-gray-800 hover:bg-red-500/20 hover:text-red-400 text-gray-400 border border-gray-700 rounded-lg text-xs transition-all active:scale-95 cursor-pointer'
+                          title='Eliminar foto'
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
 
-              {newImagePreview && (
-                <button
-                  type='button'
-                  onClick={handleRevertImage}
-                  className='py-2.5 px-3 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl text-xs font-medium flex items-center gap-1.5 transition-all active:scale-95 border border-gray-700'
-                  title='Restaurar foto original'
-                >
-                  <Undo2 size={14} />
-                  <span>Deshacer</span>
-                </button>
-              )}
+                {/* Add Photo Button */}
+                {photoList.length < MAX_PHOTOS && (
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className='border-2 border-dashed border-gray-700 hover:border-brand-500 bg-gray-900/50 hover:bg-brand-500/5 rounded-xl aspect-[4/5] flex flex-col items-center justify-center text-center p-2 cursor-pointer transition-all active:scale-95 group/add'
+                    title='Agregar otra foto a la prenda'
+                  >
+                    <div className='w-8 h-8 rounded-full bg-brand-600/20 border border-brand-500/30 text-brand-300 flex items-center justify-center mb-1 group-hover/add:scale-110 transition-transform'>
+                      <Plus size={16} />
+                    </div>
+                    <span className='text-[11px] font-semibold text-gray-200 leading-tight'>
+                      + Otra foto
+                    </span>
+                    <span className='text-[9px] text-gray-500 mt-0.5'>
+                      Espalda / Detalle
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
-            <p className='text-gray-500 text-[11px] mt-2 text-center'>
-              Acepta fotos directas de la cámara o galería. Se optimizan automáticamente a WebP 4:5.
-            </p>
           </div>
 
           {/* SECTION 2: GARMENT NAME */}
@@ -459,7 +617,7 @@ const EditProductModal = ({ product, onClose, onSaveSuccess }) => {
                 <button
                   type='button'
                   onClick={() => setShowNewCat(true)}
-                  className='text-xs text-brand-400 hover:text-brand-300 flex items-center gap-1 font-medium'
+                  className='text-xs text-brand-400 hover:text-brand-300 flex items-center gap-1 font-medium cursor-pointer'
                 >
                   <Plus size={13} />
                   <span>Crear nueva categoría</span>
@@ -488,7 +646,7 @@ const EditProductModal = ({ product, onClose, onSaveSuccess }) => {
                   type='button'
                   onClick={handleQuickCreateCategory}
                   disabled={creatingCat || !newCatName.trim()}
-                  className='btn-primary py-2 px-3 text-xs font-sans shrink-0'
+                  className='btn-primary py-2 px-3 text-xs font-sans shrink-0 cursor-pointer'
                 >
                   {creatingCat ? '...' : 'Crear'}
                 </button>
@@ -498,7 +656,7 @@ const EditProductModal = ({ product, onClose, onSaveSuccess }) => {
                     setShowNewCat(false)
                     setNewCatName('')
                   }}
-                  className='p-2 bg-gray-800 hover:bg-gray-700 text-gray-400 rounded-xl text-xs shrink-0'
+                  className='p-2 bg-gray-800 hover:bg-gray-700 text-gray-400 rounded-xl text-xs shrink-0 cursor-pointer'
                   title='Cancelar'
                 >
                   <X size={14} />
@@ -615,7 +773,7 @@ const EditProductModal = ({ product, onClose, onSaveSuccess }) => {
           <button
             type='button'
             onClick={onClose}
-            className='btn-secondary py-2.5 sm:py-3 px-5 text-sm font-sans'
+            className='btn-secondary py-2.5 sm:py-3 px-5 text-sm font-sans cursor-pointer'
           >
             Cancelar
           </button>
@@ -628,12 +786,12 @@ const EditProductModal = ({ product, onClose, onSaveSuccess }) => {
             {saving ? (
               <>
                 <Loader2 size={16} className='animate-spin' />
-                <span>Guardando...</span>
+                <span>Guardando cambios...</span>
               </>
             ) : (
               <>
                 <Check size={16} />
-                <span>Guardar cambios</span>
+                <span>Guardar cambios {photoList.length > 1 ? `(${photoList.length} fotos)` : ''}</span>
               </>
             )}
           </button>
@@ -641,11 +799,12 @@ const EditProductModal = ({ product, onClose, onSaveSuccess }) => {
       </div>
 
       {/* Full screen HD Zoom modal */}
-      {showZoomModal && (
+      {showZoomModal && photoList.length > 0 && (
         <ImageZoomModal
           isOpen={showZoomModal}
           onClose={() => setShowZoomModal(false)}
-          images={[{ url: currentDisplayImage, name: name || product.name, product }]}
+          images={photoList.map((item) => ({ url: item.previewUrl, name: name || product.name, product }))}
+          initialIndex={zoomInitialIndex}
           isAdmin={false}
         />
       )}

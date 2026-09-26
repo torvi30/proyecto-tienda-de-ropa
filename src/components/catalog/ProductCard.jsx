@@ -1,5 +1,8 @@
 import { useState, useMemo } from 'react'
-import { ShoppingBag, Check, Flame, Star, ZoomIn, Sparkles, MessageCircle, Share2 } from 'lucide-react'
+import {
+  ShoppingBag, Check, Flame, Star, ZoomIn, Sparkles,
+  MessageCircle, Share2, ChevronLeft, ChevronRight, Images
+} from 'lucide-react'
 import StockBadge from '../shared/StockBadge'
 import ImageZoomModal from '../shared/ImageZoomModal'
 import { useCart } from '../../store/CartContext'
@@ -17,8 +20,53 @@ const ProductCard = ({ product }) => {
   const [highlightSize, setHighlightSize] = useState(false)
   const [showZoom, setShowZoom] = useState(false)
   const [justAdded, setJustAdded] = useState(false)
+  const [activeImageIndex, setActiveImageIndex] = useState(0)
+  const [touchStartX, setTouchStartX] = useState(null)
 
   const currencySymbol = settings?.currency_symbol || '$'
+
+  // Extract all available photos for this product
+  const productImages = useMemo(() => {
+    if (Array.isArray(product?.images) && product.images.length > 0) {
+      return product.images.filter(Boolean)
+    }
+    return product?.image_url ? [product.image_url] : []
+  }, [product?.images, product?.image_url])
+
+  const currentImageUrl = productImages[activeImageIndex] || product?.image_url
+
+  // Mobile swipe gestures
+  const handleTouchStart = (e) => {
+    if (e.touches && e.touches.length === 1) {
+      setTouchStartX(e.touches[0].clientX)
+    }
+  }
+
+  const handleTouchEnd = (e) => {
+    if (touchStartX === null || !e.changedTouches || e.changedTouches.length === 0) return
+    const touchEndX = e.changedTouches[0].clientX
+    const diff = touchStartX - touchEndX
+    if (Math.abs(diff) > 35 && productImages.length > 1) {
+      if (diff > 0) {
+        // Swipe left -> next image
+        setActiveImageIndex((prev) => (prev < productImages.length - 1 ? prev + 1 : 0))
+      } else {
+        // Swipe right -> prev image
+        setActiveImageIndex((prev) => (prev > 0 ? prev - 1 : productImages.length - 1))
+      }
+    }
+    setTouchStartX(null)
+  }
+
+  const handlePrevImage = (e) => {
+    e.stopPropagation()
+    setActiveImageIndex((prev) => (prev > 0 ? prev - 1 : productImages.length - 1))
+  }
+
+  const handleNextImage = (e) => {
+    e.stopPropagation()
+    setActiveImageIndex((prev) => (prev < productImages.length - 1 ? prev + 1 : 0))
+  }
 
   // Detectar si la prenda es recién llegada (subida en los últimos 7 días)
   const isNewArrival = useMemo(() => {
@@ -145,19 +193,23 @@ const ProductCard = ({ product }) => {
       }`}
       id={`product-${product.id}`}
     >
-      {/* 4:5 Aspect Ratio Image Container with Interactive Zoom Trigger */}
+      {/* 4:5 Aspect Ratio Image Container with Interactive Zoom Trigger & Swipe Carousel */}
       <div
         onClick={() => setShowZoom(true)}
-        className='relative overflow-hidden bg-gray-900 cursor-pointer select-none'
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        className='relative overflow-hidden bg-gray-900 cursor-pointer select-none group/img'
         style={{ aspectRatio: '4/5' }}
-        title='Toca para ampliar y ver detalles en HD'
+        title='Toca para ampliar y ver todas las fotos en HD'
       >
-        {!imgError ? (
+        {!imgError && currentImageUrl ? (
           <img
-            src={product.image_url}
+            key={currentImageUrl}
+            src={currentImageUrl}
             alt={product.name}
-            className='w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105'
+            className='w-full h-full object-cover transition-transform duration-500 ease-out group-hover/img:scale-105 select-none pointer-events-none'
             loading='lazy'
+            draggable={false}
             onError={() => setImgError(true)}
           />
         ) : (
@@ -174,6 +226,36 @@ const ProductCard = ({ product }) => {
         <div className='absolute top-2.5 left-2.5 z-10'>
           <StockBadge status={product.stock_status} />
         </div>
+
+        {/* Multi-photo counter badge (e.g. 1/3) */}
+        {productImages.length > 1 && (
+          <div className='absolute top-2.5 left-1/2 -translate-x-1/2 z-10 bg-gray-950/80 backdrop-blur-md border border-gray-700/80 px-2 py-0.5 rounded-full text-[10px] font-bold text-gray-200 shadow-md flex items-center gap-1 select-none pointer-events-none'>
+            <Images size={11} className='text-brand-400' />
+            <span>{activeImageIndex + 1}/{productImages.length}</span>
+          </div>
+        )}
+
+        {/* Carousel Navigation Arrows on Desktop / Hover */}
+        {productImages.length > 1 && (
+          <>
+            <button
+              type='button'
+              onClick={handlePrevImage}
+              className='absolute left-2 top-1/2 -translate-y-1/2 z-20 w-7 h-7 rounded-full bg-gray-950/75 hover:bg-brand-600 text-white backdrop-blur-md border border-gray-700/80 flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-all active:scale-90 shadow-md cursor-pointer'
+              title='Foto anterior'
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <button
+              type='button'
+              onClick={handleNextImage}
+              className='absolute right-2 top-1/2 -translate-y-1/2 z-20 w-7 h-7 rounded-full bg-gray-950/75 hover:bg-brand-600 text-white backdrop-blur-md border border-gray-700/80 flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-all active:scale-90 shadow-md cursor-pointer'
+              title='Siguiente foto'
+            >
+              <ChevronRight size={16} />
+            </button>
+          </>
+        )}
 
         {/* Promotional / Top featured / New arrival badges */}
         <div className='absolute top-2.5 right-2.5 z-10 flex flex-wrap justify-end gap-1.5 animate-scale-in max-w-[70%]'>
@@ -207,7 +289,7 @@ const ProductCard = ({ product }) => {
 
         {/* Selected size indicator badge */}
         {selectedSize && (
-          <div className='absolute bottom-2.5 left-2.5 z-10 animate-scale-in'>
+          <div className='absolute bottom-3 left-2.5 z-10 animate-scale-in'>
             <span className='inline-flex items-center gap-1.5 bg-gradient-to-r from-brand-600 via-purple-600 to-pink-600 text-white font-bold text-xs px-2.5 py-1 rounded-full shadow-xl shadow-brand-500/40 border border-brand-300/80'>
               <Check size={13} className='text-white stroke-[3]' />
               <span>Talla {selectedSize}</span>
@@ -215,9 +297,25 @@ const ProductCard = ({ product }) => {
           </div>
         )}
 
+        {/* Pagination Dots */}
+        {productImages.length > 1 && (
+          <div className='absolute bottom-3 inset-x-0 flex items-center justify-center gap-1.5 z-10 pointer-events-none'>
+            {productImages.map((_, idx) => (
+              <span
+                key={idx}
+                className={`h-1.5 rounded-full transition-all duration-300 ${
+                  idx === activeImageIndex
+                    ? 'w-4 bg-brand-400 shadow-md'
+                    : 'w-1.5 bg-white/40'
+                }`}
+              />
+            ))}
+          </div>
+        )}
+
         {/* Floating HD Zoom trigger button */}
         <div
-          className='absolute bottom-2.5 right-2.5 z-10 w-8 h-8 rounded-full bg-gray-950/80 hover:bg-brand-600 text-gray-200 hover:text-white border border-gray-700/80 hover:border-brand-400 backdrop-blur-md flex items-center justify-center shadow-xl transition-all active:scale-90 opacity-90 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity'
+          className='absolute bottom-2.5 right-2.5 z-10 w-8 h-8 rounded-full bg-gray-950/80 hover:bg-brand-600 text-gray-200 hover:text-white border border-gray-700/80 hover:border-brand-400 backdrop-blur-md flex items-center justify-center shadow-xl transition-all active:scale-90 opacity-90 sm:opacity-0 sm:group-hover/img:opacity-100 transition-opacity'
           title='Ver en detalle / Zoom HD'
         >
           <ZoomIn size={15} />
@@ -350,11 +448,12 @@ const ProductCard = ({ product }) => {
         </div>
       </div>
 
-      {/* Previsualizador y Zoom interactivo estilo Shein */}
+      {/* Previsualizador y Zoom interactivo estilo Shein con todas las fotos */}
       <ImageZoomModal
         isOpen={showZoom}
         onClose={() => setShowZoom(false)}
-        images={[{ url: product.image_url, name: product.name, product }]}
+        images={productImages.map((url) => ({ url, name: product.name, product }))}
+        initialIndex={activeImageIndex}
         isAdmin={false}
       />
     </article>

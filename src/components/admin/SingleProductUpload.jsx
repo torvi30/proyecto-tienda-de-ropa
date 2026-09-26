@@ -1,7 +1,8 @@
 import { useState, useRef } from 'react'
 import {
   ImagePlus, Sparkles, Check, Loader2, X, Plus,
-  Flame, Star, ZoomIn, Undo2, ArrowRight, PackageCheck, Eye
+  Flame, Star, ZoomIn, ArrowRight, PackageCheck,
+  Images, Trash2, ArrowUp
 } from 'lucide-react'
 import useImageCompressor from '../../hooks/useImageCompressor'
 import useCategories from '../../hooks/useCategories'
@@ -13,26 +14,35 @@ import ImageZoomModal from '../shared/ImageZoomModal'
 import { useStore } from '../../store/StoreContext'
 import toast from 'react-hot-toast'
 
+const MAX_PHOTOS = 5
+
 const STOCK_OPTIONS = [
   { value: 'available', label: 'Disponible', color: 'text-green-400', border: 'border-green-500/40', bg: 'bg-green-500/10' },
   { value: 'low_stock', label: 'Pocas unidades', color: 'text-yellow-400', border: 'border-yellow-500/40', bg: 'bg-yellow-500/10' },
   { value: 'sold_out', label: 'Agotado (Oculto)', color: 'text-red-400', border: 'border-red-500/40', bg: 'bg-red-500/10' },
 ]
 
+const generateId = () => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+  return `photo_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+}
+
 const SingleProductUpload = ({ onSuccess, onNavigateInventory }) => {
-  const fileInputRef = useRef(null)
+  const mainInputRef = useRef(null)
+  const additionalInputRef = useRef(null)
   const { compress } = useImageCompressor()
   const { categories } = useCategories()
   const { settings } = useStore()
   const sym = settings?.currency_symbol || '$'
 
-  // Image state
-  const [imageFile, setImageFile] = useState(null) // Raw original File
-  const [imageBlob, setImageBlob] = useState(null) // WebP compressed Blob
-  const [previewUrl, setPreviewUrl] = useState(null)
-  const [imageSizeKB, setImageSizeKB] = useState(0)
+  // Multi-image state: array of { id, file, blob, previewUrl, sizeKB }
+  // images[0] is ALWAYS the Main / Cover photo
+  const [images, setImages] = useState([])
   const [isCompressing, setIsCompressing] = useState(false)
   const [showZoomModal, setShowZoomModal] = useState(false)
+  const [zoomInitialIndex, setZoomInitialIndex] = useState(0)
 
   // Form fields
   const [name, setName] = useState('')
@@ -52,10 +62,11 @@ const SingleProductUpload = ({ onSuccess, onNavigateInventory }) => {
 
   // Submit and success state
   const [isSaving, setIsSaving] = useState(false)
+  const [saveProgress, setSaveProgress] = useState({ done: 0, total: 0 })
   const [lastCreatedProduct, setLastCreatedProduct] = useState(null)
 
-  // Process selected image file
-  const handleSelectImage = async (e) => {
+  // Handle selecting the main photo or adding an additional photo
+  const handleAddPhoto = async (e, isMainSlot = false) => {
     const file = e.target.files?.[0]
     if (!file) return
 
@@ -64,25 +75,45 @@ const SingleProductUpload = ({ onSuccess, onNavigateInventory }) => {
       return
     }
 
+    if (images.length >= MAX_PHOTOS && !isMainSlot) {
+      toast.error(`Máximo ${MAX_PHOTOS} fotos por prenda`)
+      return
+    }
+
     setIsCompressing(true)
     const toastId = toast.loading('Comprimiendo foto a WebP 4:5...')
     try {
       const res = await compress(file)
-      if (previewUrl) URL.revokeObjectURL(previewUrl)
+      const newPhotoObj = {
+        id: generateId(),
+        file,
+        blob: res.blob,
+        previewUrl: res.previewUrl,
+        sizeKB: res.compressedSizeKB,
+      }
 
-      setImageFile(file)
-      setImageBlob(res.blob)
-      setPreviewUrl(res.previewUrl)
-      setImageSizeKB(res.compressedSizeKB)
+      if (isMainSlot && images.length > 0) {
+        // Replace main photo (slot 0)
+        URL.revokeObjectURL(images[0].previewUrl)
+        setImages((prev) => [newPhotoObj, ...prev.slice(1)])
+        toast.success('¡Foto de portada actualizada!', { id: toastId, icon: '⭐' })
+      } else {
+        // Append new photo to the garment gallery
+        setImages((prev) => [...prev, newPhotoObj])
+        toast.success(
+          images.length === 0
+            ? '¡Foto principal lista!'
+            : `¡Foto ${images.length + 1} agregada a la prenda!`,
+          { id: toastId, icon: '✨' }
+        )
+      }
 
-      // Si el nombre está vacío y el archivo tiene nombre descriptivo, sugerirlo
+      // Sugerir nombre si está vacío y el archivo tiene nombre descriptivo
       const rawName = file.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ')
       const isGeneric = /^(image|img|photo|foto|dsc|p)[0-9_-]*$/i.test(rawName.trim())
       if (!name && !isGeneric && rawName.length > 2) {
         setName(rawName)
       }
-
-      toast.success('¡Foto lista y optimizada!', { id: toastId, icon: '✨' })
     } catch (err) {
       console.error(err)
       toast.error('Error al procesar la foto', { id: toastId })
@@ -92,12 +123,26 @@ const SingleProductUpload = ({ onSuccess, onNavigateInventory }) => {
     }
   }
 
-  const handleRemoveImage = () => {
-    if (previewUrl) URL.revokeObjectURL(previewUrl)
-    setImageFile(null)
-    setImageBlob(null)
-    setPreviewUrl(null)
-    setImageSizeKB(0)
+  // Set any photo as the main cover photo (moves it to index 0)
+  const handleSetAsCover = (index) => {
+    if (index === 0) return
+    setImages((prev) => {
+      const copy = [...prev]
+      const [target] = copy.splice(index, 1)
+      copy.unshift(target)
+      return copy
+    })
+    toast.success('⭐ ¡Esta foto ahora es la Portada Principal!', { icon: '⭐' })
+  }
+
+  // Remove a photo from the gallery
+  const handleRemovePhoto = (index) => {
+    setImages((prev) => {
+      const target = prev[index]
+      if (target?.previewUrl) URL.revokeObjectURL(target.previewUrl)
+      return prev.filter((_, i) => i !== index)
+    })
+    toast('Foto eliminada de la prenda', { icon: '🗑️' })
   }
 
   // Quick category creation
@@ -141,8 +186,8 @@ const SingleProductUpload = ({ onSuccess, onNavigateInventory }) => {
   const handleSubmit = async (e) => {
     e.preventDefault()
 
-    if (!imageBlob && !imageFile) {
-      toast.error('Debes seleccionar una foto para la prenda 📷', { icon: '⚠️' })
+    if (images.length === 0) {
+      toast.error('Debes seleccionar al menos una foto para la prenda 📷', { icon: '⚠️' })
       return
     }
 
@@ -164,18 +209,26 @@ const SingleProductUpload = ({ onSuccess, onNavigateInventory }) => {
     }
 
     setIsSaving(true)
-    const toastId = toast.loading('Subiendo imagen a la nube y publicando prenda...')
+    setSaveProgress({ done: 0, total: images.length })
+    const toastId = toast.loading(`Subiendo 1 de ${images.length} fotos a la nube...`)
 
     try {
-      // 1. Subir a Cloudinary el blob WebP comprimido (ultra ligero < 150KB)
-      const uploadRes = await uploadToCloudinary(imageBlob || imageFile, trimmedName)
-      const imageUrl = uploadRes.secure_url
+      // 1. Subir a Cloudinary todas las fotos de la prenda en orden estricto
+      const uploadedUrls = []
+      for (let i = 0; i < images.length; i++) {
+        const item = images[i]
+        const roleName = i === 0 ? 'principal' : `angulo-${i + 1}`
+        const uploadRes = await uploadToCloudinary(item.blob || item.file, `${trimmedName}-${roleName}`)
+        uploadedUrls.push(uploadRes.secure_url)
+        setSaveProgress({ done: i + 1, total: images.length })
+        toast.loading(`Subiendo foto ${i + 1} de ${images.length}...`, { id: toastId })
+      }
 
       // 2. Calcular precio de oferta si aplica
       const origPriceNum = parseFloat(originalPrice)
       const validOrigPrice = isOnSale && !isNaN(origPriceNum) && origPriceNum > parsedPrice ? origPriceNum : null
 
-      // 3. Crear documento en Firestore
+      // 3. Crear documento en Firestore con array 'images' y 'image_url' (portada)
       if (!db) throw new Error('Firestore no está inicializado')
 
       const newProductData = {
@@ -186,7 +239,8 @@ const SingleProductUpload = ({ onSuccess, onNavigateInventory }) => {
         is_featured: Boolean(isFeatured),
         category_id: categoryId || null,
         sizes,
-        image_url: imageUrl,
+        image_url: uploadedUrls[0], // Foto principal de portada
+        images: uploadedUrls,       // Todas las fotos de la galería (espalda, detalle, etc.)
         stock_status: stockStatus,
         is_visible: isVisible,
         created_at: serverTimestamp(),
@@ -194,12 +248,11 @@ const SingleProductUpload = ({ onSuccess, onNavigateInventory }) => {
 
       const docRef = await addDoc(collection(db, 'products'), newProductData)
 
-      toast.success('¡Prenda publicada con éxito en la tienda! 🎉', { id: toastId, duration: 4000 })
+      toast.success(`¡Prenda con ${uploadedUrls.length} foto(s) publicada con éxito! 🎉`, { id: toastId, duration: 4000 })
 
       setLastCreatedProduct({
         id: docRef.id,
         ...newProductData,
-        image_url: imageUrl,
       })
 
       if (onSuccess) onSuccess()
@@ -213,7 +266,10 @@ const SingleProductUpload = ({ onSuccess, onNavigateInventory }) => {
 
   // Reset form to upload another garment
   const handleUploadAnother = () => {
-    handleRemoveImage()
+    images.forEach((img) => {
+      if (img.previewUrl) URL.revokeObjectURL(img.previewUrl)
+    })
+    setImages([])
     setName('')
     setPrice('')
     setOriginalPrice('')
@@ -241,18 +297,23 @@ const SingleProductUpload = ({ onSuccess, onNavigateInventory }) => {
             ¡Prenda lista en la tienda!
           </h2>
           <p className='text-gray-400 text-sm mt-1'>
-            Los clientes ya pueden verla y pedirla por WhatsApp.
+            {lastCreatedProduct.images?.length || 1} foto(s) publicadas. Los clientes ya pueden deslizar entre ellas y pedirla por WhatsApp.
           </p>
         </div>
 
         {/* Card preview of the published product */}
         <div className='bg-gray-950/70 border border-gray-800 rounded-2xl p-4 flex items-center gap-4 text-left max-w-md mx-auto'>
-          <div className='w-16 h-20 rounded-xl overflow-hidden bg-gray-800 border border-gray-700/60 shrink-0 shadow-md aspect-[4/5]'>
+          <div className='w-16 h-20 rounded-xl overflow-hidden bg-gray-800 border border-gray-700/60 shrink-0 shadow-md aspect-[4/5] relative'>
             <img
               src={lastCreatedProduct.image_url}
               alt={lastCreatedProduct.name}
               className='w-full h-full object-cover'
             />
+            {lastCreatedProduct.images?.length > 1 && (
+              <span className='absolute bottom-1 right-1 bg-black/80 text-[9px] text-white px-1.5 py-0.5 rounded font-bold'>
+                {lastCreatedProduct.images.length} fotos
+              </span>
+            )}
           </div>
           <div className='min-w-0 flex-1'>
             <p className='text-gray-100 font-semibold text-sm truncate'>
@@ -307,28 +368,42 @@ const SingleProductUpload = ({ onSuccess, onNavigateInventory }) => {
   const discountPercent = hasDiscount ? Math.round(((numOrigPrice - numPrice) / numOrigPrice) * 100) : 0
   const savings = hasDiscount ? numOrigPrice - numPrice : 0
 
+  const mainPhoto = images[0] || null
+  const additionalPhotos = images.slice(1)
+
   return (
     <div className='max-w-xl mx-auto'>
+      {/* Hidden file inputs */}
       <input
-        ref={fileInputRef}
+        ref={mainInputRef}
         type='file'
         accept='image/*'
         className='hidden'
-        onChange={handleSelectImage}
+        onChange={(e) => handleAddPhoto(e, images.length > 0)}
+      />
+      <input
+        ref={additionalInputRef}
+        type='file'
+        accept='image/*'
+        className='hidden'
+        onChange={(e) => handleAddPhoto(e, false)}
       />
 
       <form onSubmit={handleSubmit} className='bg-gray-900 border border-gray-800 rounded-3xl p-5 sm:p-7 space-y-6 shadow-2xl'>
-        {/* STEP 1: PHOTO SELECTION */}
+        {/* STEP 1: MULTI-PHOTO GALLERY MANAGER */}
         <div>
           <div className='flex items-center justify-between mb-2'>
             <label className='text-gray-300 font-bold text-sm uppercase tracking-wider flex items-center gap-2'>
               <span className='w-6 h-6 rounded-full bg-brand-600/30 text-brand-300 text-xs flex items-center justify-center font-bold'>1</span>
-              <span>Foto de la prenda *</span>
+              <span>Fotos de la prenda ({images.length}/{MAX_PHOTOS}) *</span>
             </label>
-            {previewUrl && (
+            {images.length > 0 && (
               <button
                 type='button'
-                onClick={() => setShowZoomModal(true)}
+                onClick={() => {
+                  setZoomInitialIndex(0)
+                  setShowZoomModal(true)
+                }}
                 className='text-xs text-brand-400 hover:text-brand-300 flex items-center gap-1 font-medium'
               >
                 <ZoomIn size={13} />
@@ -337,10 +412,10 @@ const SingleProductUpload = ({ onSuccess, onNavigateInventory }) => {
             )}
           </div>
 
-          {!previewUrl ? (
-            /* Empty State: Big comfortable touch dropzone */
+          {!mainPhoto ? (
+            /* Empty State: Select 1st / Main Photo */
             <div
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() => mainInputRef.current?.click()}
               className='relative border-2 border-dashed border-gray-700 hover:border-brand-500 bg-gray-950/60 hover:bg-brand-500/5 rounded-2xl p-8 sm:p-10 text-center cursor-pointer transition-all active:scale-[0.99] group'
               title='Toca para abrir cámara o galería'
             >
@@ -357,10 +432,10 @@ const SingleProductUpload = ({ onSuccess, onNavigateInventory }) => {
                   </div>
                   <div>
                     <p className='text-gray-200 font-bold text-base sm:text-lg'>
-                      Toca aquí para seleccionar la foto
+                      Toca para seleccionar la Foto Principal
                     </p>
                     <p className='text-gray-400 text-xs sm:text-sm mt-1'>
-                      Abre la cámara o elige una foto de tu galería
+                      Esta será la foto de portada. Luego podrás agregar más ángulos (espalda, detalle).
                     </p>
                   </div>
                   <span className='inline-block text-[11px] text-gray-500 bg-gray-900 border border-gray-800 px-3 py-1 rounded-full font-mono'>
@@ -370,46 +445,144 @@ const SingleProductUpload = ({ onSuccess, onNavigateInventory }) => {
               )}
             </div>
           ) : (
-            /* Selected Photo Preview Card */
-            <div className='bg-gray-950/70 border border-gray-800 rounded-2xl p-4 flex flex-col items-center animate-fade-in'>
-              <div
-                onClick={() => setShowZoomModal(true)}
-                className='relative w-44 sm:w-52 aspect-[4/5] rounded-2xl overflow-hidden bg-gray-800 border-2 border-gray-700 shadow-2xl cursor-pointer group/photo select-none'
-                title='Toca para ver en pantalla completa'
-              >
-                <img
-                  src={previewUrl}
-                  alt='Previsualización'
-                  className='w-full h-full object-cover transition-transform duration-300 group-hover/photo:scale-105'
-                />
-                <div className='absolute inset-0 bg-black/40 opacity-0 group-hover/photo:opacity-100 transition-opacity flex flex-col items-center justify-center text-white gap-1'>
-                  <ZoomIn size={22} className='text-brand-300' />
-                  <span className='text-xs font-semibold'>Zoom HD</span>
+            /* Photo Showcase: Main Photo + Additional Angles Strip */
+            <div className='bg-gray-950/70 border border-gray-800 rounded-2xl p-4 sm:p-5 space-y-4 animate-fade-in'>
+              {/* Main Cover Photo Showcase */}
+              <div className='flex flex-col items-center'>
+                <div className='relative w-44 sm:w-52 aspect-[4/5] rounded-2xl overflow-hidden bg-gray-800 border-2 border-amber-400/80 shadow-2xl group/photo select-none'>
+                  <img
+                    src={mainPhoto.previewUrl}
+                    alt='Portada'
+                    className='w-full h-full object-cover transition-transform duration-300 group-hover/photo:scale-105'
+                  />
+
+                  {/* Golden Cover Badge */}
+                  <div className='absolute top-2.5 inset-x-2 flex items-center justify-between pointer-events-none'>
+                    <span className='inline-flex items-center gap-1 bg-amber-400 text-gray-950 font-bold text-[10px] px-2.5 py-0.5 rounded-full shadow-lg shadow-amber-400/30 uppercase tracking-wider'>
+                      <Star size={11} className='fill-current' />
+                      <span>Portada Principal</span>
+                    </span>
+                    <span className='bg-gray-950/80 text-green-400 text-[10px] font-mono px-1.5 py-0.5 rounded border border-gray-700'>
+                      {mainPhoto.sizeKB}KB
+                    </span>
+                  </div>
+
+                  {/* Zoom Overlay */}
+                  <div
+                    onClick={() => {
+                      setZoomInitialIndex(0)
+                      setShowZoomModal(true)
+                    }}
+                    className='absolute inset-0 bg-black/40 opacity-0 group-hover/photo:opacity-100 transition-opacity flex flex-col items-center justify-center text-white gap-1 cursor-pointer'
+                  >
+                    <ZoomIn size={22} className='text-brand-300' />
+                    <span className='text-xs font-semibold'>Zoom HD</span>
+                  </div>
                 </div>
-                <div className='absolute bottom-2 right-2 bg-gray-950/90 border border-gray-700 text-green-400 text-[10px] font-mono px-2 py-0.5 rounded-md'>
-                  {imageSizeKB} KB (WebP)
+
+                <div className='flex items-center gap-2 mt-3'>
+                  <button
+                    type='button'
+                    onClick={() => mainInputRef.current?.click()}
+                    className='py-2 px-3.5 bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 rounded-xl text-xs font-medium flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer'
+                  >
+                    <ImagePlus size={14} />
+                    <span>Cambiar portada</span>
+                  </button>
+                  {images.length === 1 && (
+                    <button
+                      type='button'
+                      onClick={() => handleRemovePhoto(0)}
+                      className='py-2 px-3 bg-gray-800 hover:bg-red-500/20 hover:text-red-400 text-gray-400 border border-gray-700 rounded-xl text-xs font-medium transition-all active:scale-95 cursor-pointer'
+                      title='Quitar foto'
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
                 </div>
               </div>
 
-              {/* Replace / Remove buttons */}
-              <div className='flex items-center gap-2 mt-4'>
-                <button
-                  type='button'
-                  onClick={() => fileInputRef.current?.click()}
-                  className='py-2 px-4 bg-brand-600/30 hover:bg-brand-600/40 border border-brand-500/40 text-brand-200 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer'
-                >
-                  <ImagePlus size={14} />
-                  <span>Cambiar foto</span>
-                </button>
-                <button
-                  type='button'
-                  onClick={handleRemoveImage}
-                  className='py-2 px-3 bg-gray-800 hover:bg-red-500/20 hover:text-red-400 text-gray-400 border border-gray-700 rounded-xl text-xs font-medium transition-all active:scale-95 cursor-pointer'
-                  title='Quitar foto'
-                >
-                  <X size={14} />
-                  <span>Quitar</span>
-                </button>
+              {/* Additional Photos Section */}
+              <div className='border-t border-gray-800/80 pt-4'>
+                <div className='flex items-center justify-between mb-2.5'>
+                  <span className='text-gray-300 text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5'>
+                    <Images size={13} className='text-brand-400' />
+                    <span>Fotos adicionales ({additionalPhotos.length} / {MAX_PHOTOS - 1})</span>
+                  </span>
+                  <span className='text-[11px] text-gray-500'>
+                    Espalda, detalles o puesta
+                  </span>
+                </div>
+
+                {/* Thumbnails row / grid */}
+                <div className='grid grid-cols-2 sm:grid-cols-4 gap-2.5'>
+                  {additionalPhotos.map((item, idx) => {
+                    const actualIndex = idx + 1
+                    return (
+                      <div
+                        key={item.id}
+                        className='bg-gray-900 border border-gray-800 rounded-xl p-2 flex flex-col items-center text-center space-y-2 relative group/thumb'
+                      >
+                        <div
+                          onClick={() => {
+                            setZoomInitialIndex(actualIndex)
+                            setShowZoomModal(true)
+                          }}
+                          className='w-full aspect-[4/5] rounded-lg overflow-hidden bg-gray-800 cursor-pointer relative shadow-sm'
+                        >
+                          <img
+                            src={item.previewUrl}
+                            alt={`Foto ${actualIndex + 1}`}
+                            className='w-full h-full object-cover'
+                          />
+                          <span className='absolute bottom-1 right-1 bg-black/80 text-gray-300 text-[9px] px-1 rounded font-mono'>
+                            {item.sizeKB}KB
+                          </span>
+                        </div>
+
+                        {/* Actions for this additional angle */}
+                        <div className='w-full flex items-center justify-between gap-1 pt-0.5'>
+                          <button
+                            type='button'
+                            onClick={() => handleSetAsCover(actualIndex)}
+                            className='flex-1 py-1 px-1.5 bg-amber-400/15 hover:bg-amber-400/25 border border-amber-400/30 text-amber-300 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-all active:scale-95 cursor-pointer'
+                            title='Poner esta foto como la portada principal'
+                          >
+                            <Star size={10} className='fill-current' />
+                            <span>Hacer portada</span>
+                          </button>
+                          <button
+                            type='button'
+                            onClick={() => handleRemovePhoto(actualIndex)}
+                            className='p-1 bg-gray-800 hover:bg-red-500/20 hover:text-red-400 text-gray-400 border border-gray-700 rounded-lg text-xs transition-all active:scale-95 cursor-pointer'
+                            title='Eliminar esta foto'
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  })}
+
+                  {/* Add More Photo Button Box */}
+                  {images.length < MAX_PHOTOS && (
+                    <div
+                      onClick={() => additionalInputRef.current?.click()}
+                      className='border-2 border-dashed border-gray-700 hover:border-brand-500 bg-gray-900/50 hover:bg-brand-500/5 rounded-xl aspect-[4/5] flex flex-col items-center justify-center text-center p-2 cursor-pointer transition-all active:scale-95 group/add'
+                      title='Agregar otra foto a la prenda'
+                    >
+                      <div className='w-9 h-9 rounded-full bg-brand-600/20 border border-brand-500/30 text-brand-300 flex items-center justify-center mb-1.5 group-hover/add:scale-110 transition-transform'>
+                        <Plus size={18} />
+                      </div>
+                      <span className='text-[11px] font-semibold text-gray-200 leading-tight'>
+                        + Agregar foto
+                      </span>
+                      <span className='text-[9px] text-gray-500 mt-0.5'>
+                        Espalda / Detalle
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -618,7 +791,7 @@ const SingleProductUpload = ({ onSuccess, onNavigateInventory }) => {
                 className='form-input text-sm py-3 bg-gray-900 font-sans'
               >
                 <option value=''>Sin categoría específica</option>
-                {categories.map((cat) => (
+                {(categories || []).map((cat) => (
                   <option key={cat.id} value={cat.id}>
                     {cat.name}
                   </option>
@@ -699,12 +872,16 @@ const SingleProductUpload = ({ onSuccess, onNavigateInventory }) => {
             {isSaving ? (
               <>
                 <Loader2 size={20} className='animate-spin' />
-                <span>Publicando prenda en la tienda...</span>
+                <span>
+                  Publicando foto {saveProgress.done} de {saveProgress.total}...
+                </span>
               </>
             ) : (
               <>
                 <Sparkles size={18} />
-                <span>Publicar Prenda en la Tienda</span>
+                <span>
+                  Publicar Prenda en la Tienda {images.length > 1 ? `(${images.length} fotos)` : ''}
+                </span>
               </>
             )}
           </button>
@@ -712,11 +889,12 @@ const SingleProductUpload = ({ onSuccess, onNavigateInventory }) => {
       </form>
 
       {/* Full screen HD Zoom modal */}
-      {showZoomModal && previewUrl && (
+      {showZoomModal && images.length > 0 && (
         <ImageZoomModal
           isOpen={showZoomModal}
           onClose={() => setShowZoomModal(false)}
-          images={[{ url: previewUrl, name: name || 'Prenda nueva' }]}
+          images={images.map((img) => ({ url: img.previewUrl, name: name || 'Prenda' }))}
+          initialIndex={zoomInitialIndex}
           isAdmin={false}
         />
       )}
