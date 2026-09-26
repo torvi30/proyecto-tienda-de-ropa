@@ -230,26 +230,28 @@ const ProductList = ({ refreshKey }) => {
       {products.map((product) => (
         <div
           key={product.id}
-          className={`bg-gray-800/50 hover:bg-gray-800/80 border rounded-2xl overflow-hidden transition-all duration-200
+          onClick={() => setEditingProduct(product)}
+          className={`bg-gray-800/50 hover:bg-gray-800/80 border rounded-2xl overflow-hidden transition-all duration-200 cursor-pointer select-none
             ${!product.is_visible ? 'opacity-60 border-gray-700/50' : 'border-gray-700/80 hover:border-brand-500/40 hover:shadow-lg hover:shadow-brand-500/5'}
             ${deleteConfirm === product.id ? 'border-red-500/50' : ''}`}
         >
           <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 sm:p-4'>
             {/* Image and product information container - Touching opens the full configuration modal */}
             <div
-              onClick={() => setEditingProduct(product)}
-              className='flex items-center gap-3 sm:gap-4 min-w-0 flex-1 cursor-pointer group/item select-none'
+              className='flex items-center gap-3 sm:gap-4 min-w-0 flex-1 group/item select-none'
               title='Toca para abrir foto y configurar este producto'
             >
               {/* Thumbnail image with visual touch overlay */}
-              <div className='relative w-16 h-20 rounded-xl overflow-hidden shrink-0 bg-gray-700 border border-gray-700/60 shadow-md group-hover/item:scale-105 group-hover/item:border-brand-400 transition-all'>
+              <div className='relative w-16 h-20 rounded-xl overflow-hidden shrink-0 bg-gray-700 border border-gray-700/60 shadow-md group-hover/item:scale-105 group-hover/item:border-brand-400 transition-all select-none'>
                 <img
                   src={product.image_url}
                   alt={product.name}
-                  className='w-full h-full object-cover'
+                  draggable={false}
+                  className='w-full h-full object-cover pointer-events-none select-none'
                 />
-                <div className='absolute inset-0 bg-black/45 opacity-0 group-hover/item:opacity-100 flex items-center justify-center text-white transition-opacity'>
+                <div className='absolute inset-0 bg-black/40 opacity-0 group-hover/item:opacity-100 flex flex-col items-center justify-center text-white transition-opacity gap-0.5'>
                   <Pencil size={15} className='text-brand-300' />
+                  <span className='text-[9px] font-bold text-gray-200'>Editar</span>
                 </div>
               </div>
 
@@ -259,7 +261,7 @@ const ProductList = ({ refreshKey }) => {
                   <p className='text-gray-100 font-semibold text-sm sm:text-base leading-snug truncate group-hover/item:text-brand-300 transition-colors'>
                     {product.name}
                   </p>
-                  <span className='text-[10px] text-brand-400 bg-brand-500/10 px-1.5 py-0.5 rounded-md border border-brand-500/25 shrink-0 font-medium sm:hidden'>
+                  <span className='text-[10px] text-brand-400 bg-brand-500/10 px-1.5 py-0.5 rounded-md border border-brand-500/25 shrink-0 font-medium'>
                     Tocar para editar
                   </span>
                 </div>
@@ -380,7 +382,10 @@ const ProductList = ({ refreshKey }) => {
                 </button>
               </div>
             ) : (
-              <div className='flex items-center justify-end gap-1.5 sm:gap-2 shrink-0 pt-2.5 sm:pt-0 border-t sm:border-t-0 border-gray-700/60'>
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className='flex items-center justify-end gap-1.5 sm:gap-2 shrink-0 pt-2.5 sm:pt-0 border-t sm:border-t-0 border-gray-700/60'
+              >
                 {updating === product.id ? (
                   <div className='p-2 flex items-center justify-center'>
                     <Loader2 size={18} className='text-brand-400 animate-spin' />
@@ -408,11 +413,11 @@ const ProductList = ({ refreshKey }) => {
                     <button
                       onClick={() => setEditingProduct(product)}
                       title='Editar precio, nombre, tallas y detalles'
-                      className='p-2 sm:py-2 sm:px-3 bg-brand-600/15 hover:bg-brand-600/30 text-brand-300 hover:text-brand-200 rounded-xl transition-all active:scale-90 border border-brand-500/30 flex items-center gap-1.5'
+                      className='p-2 sm:py-2 sm:px-3 bg-brand-600 hover:bg-brand-500 text-white rounded-xl transition-all active:scale-90 shadow-md shadow-brand-600/20 flex items-center gap-1.5 cursor-pointer'
                       id={`edit-product-${product.id}`}
                     >
-                      <Pencil size={15} />
-                      <span className='text-xs font-semibold hidden md:inline'>Editar</span>
+                      <Pencil size={14} />
+                      <span className='text-xs font-semibold'>Editar</span>
                     </button>
 
                     {/* Cycle stock status button */}
