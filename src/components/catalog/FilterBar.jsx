@@ -1,4 +1,4 @@
-import { SlidersHorizontal, X, Flame, Star } from 'lucide-react'
+import { SlidersHorizontal, X, Flame, Star, Sparkles } from 'lucide-react'
 
 // Global standard sizing list
 const ALL_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'Única']
@@ -9,21 +9,25 @@ const FilterBar = ({
   selectedSize,
   onlySales,
   onlyFeatured,
+  onlyNew,
   onCategoryChange,
   onSizeChange,
   onToggleSales,
   onToggleFeatured,
+  onToggleNew,
   saleCount = 0,
   featuredCount = 0,
+  newCount = 0,
   totalVisible,
 }) => {
-  const hasActiveFilter = selectedCategory || selectedSize || onlySales || onlyFeatured
+  const hasActiveFilter = selectedCategory || selectedSize || onlySales || onlyFeatured || onlyNew
 
   const clearAll = () => {
     onCategoryChange(null)
     onSizeChange(null)
     if (onToggleSales && onlySales) onToggleSales()
     if (onToggleFeatured && onlyFeatured) onToggleFeatured()
+    if (onToggleNew && onlyNew) onToggleNew()
   }
 
   return (
@@ -44,15 +48,32 @@ const FilterBar = ({
                 onCategoryChange(null)
                 if (onlySales && onToggleSales) onToggleSales()
                 if (onlyFeatured && onToggleFeatured) onToggleFeatured()
+                if (onlyNew && onToggleNew) onToggleNew()
               }}
               className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 ${
-                !selectedCategory && !onlySales && !onlyFeatured
+                !selectedCategory && !onlySales && !onlyFeatured && !onlyNew
                   ? 'bg-brand-600 text-white shadow-md shadow-brand-600/30'
                   : 'bg-gray-900 border border-gray-800 text-gray-400 hover:border-gray-700 hover:text-gray-200'
               }`}
             >
               Todas
             </button>
+
+            {/* New arrivals filter button */}
+            {newCount > 0 && (
+              <button
+                id='filter-new'
+                onClick={onToggleNew}
+                className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all duration-200 flex items-center gap-1.5 ${
+                  onlyNew
+                    ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md shadow-violet-600/30 ring-2 ring-violet-400/40'
+                    : 'bg-violet-500/10 border border-violet-500/30 text-violet-300 hover:bg-violet-500/20'
+                }`}
+              >
+                <Sparkles size={13} className='text-amber-300 fill-current animate-pulse' />
+                <span>Nuevos ({newCount})</span>
+              </button>
+            )}
 
             {/* Featured items filter button if featured products exist */}
             {featuredCount > 0 && (
@@ -94,9 +115,10 @@ const FilterBar = ({
                   onCategoryChange(cat.id === selectedCategory ? null : cat.id)
                   if (onlySales && onToggleSales) onToggleSales()
                   if (onlyFeatured && onToggleFeatured) onToggleFeatured()
+                  if (onlyNew && onToggleNew) onToggleNew()
                 }}
                 className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 ${
-                  selectedCategory === cat.id && !onlySales && !onlyFeatured
+                  selectedCategory === cat.id && !onlySales && !onlyFeatured && !onlyNew
                     ? 'bg-brand-600 text-white shadow-md shadow-brand-600/30'
                     : 'bg-gray-900 border border-gray-800 text-gray-400 hover:border-gray-700 hover:text-gray-200'
                 }`}

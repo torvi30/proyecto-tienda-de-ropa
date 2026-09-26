@@ -29,16 +29,19 @@ export const compressImage = (file, options = {}) => {
   const cfg = { ...CONFIG, ...options }
 
   return new Promise((resolve, reject) => {
-    if (!file.type.startsWith('image/')) {
-      return reject(new Error(`El archivo "${file.name}" no es una imagen valida.`))
+    if (!file || !file.type || !file.type.startsWith('image/')) {
+      return reject(new Error(`El archivo "${file?.name || 'desconocido'}" no es una imagen válida.`))
     }
 
-    const reader = new FileReader()
+    // Usar createObjectURL en vez de readAsDataURL para evitar consumir gigabytes de RAM en celulares
+    const objectUrl = URL.createObjectURL(file)
+    const img = new Image()
 
-    reader.onload = (e) => {
-      const img = new Image()
+    img.onload = () => {
+      // Liberar URL temporal inmediatamente
+      URL.revokeObjectURL(objectUrl)
 
-      img.onload = () => {
+      try {
         const canvas = document.createElement('canvas')
         canvas.width  = cfg.targetWidth
         canvas.height = cfg.targetHeight
@@ -65,21 +68,19 @@ export const compressImage = (file, options = {}) => {
 
         // --- Iterative quality reduction until reaching target file size ---
         let quality = cfg.initialQuality
-        let blob    = null
 
         const compress = () => {
           canvas.toBlob(
             (result) => {
-              if (!result) return reject(new Error('Failed to compress image.'))
+              if (!result) return reject(new Error('Fallo al comprimir la imagen en el navegador.'))
 
               const sizeKB = result.size / 1024
 
               if (sizeKB <= cfg.maxFileSizeKB || quality <= cfg.minQuality) {
                 // Target file size or minimum quality floor reached
-                blob = result
-                const previewUrl = URL.createObjectURL(blob)
+                const previewUrl = URL.createObjectURL(result)
                 resolve({
-                  blob,
+                  blob: result,
                   previewUrl,
                   originalSizeKB: Math.round(file.size / 1024),
                   compressedSizeKB: Math.round(sizeKB),
@@ -97,19 +98,22 @@ export const compressImage = (file, options = {}) => {
         }
 
         compress()
+      } catch (canvasErr) {
+        reject(new Error(`Error al procesar en lienzo: ${canvasErr.message}`))
       }
-
-      img.onerror = () => reject(new Error(`Failed to load image "${file.name}".`))
-      img.src = e.target.result
     }
 
-    reader.onerror = () => reject(new Error(`Failed to read file "${file.name}".`))
-    reader.readAsDataURL(file)
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl)
+      reject(new Error(`No se pudo cargar la imagen "${file.name}".`))
+    }
+
+    img.src = objectUrl
   })
 }
 
 /**
- * Compresses an array of files in parallel.
+ * Compresses an array of files in strict sequence to avoid memory overload on mobile devices.
  * Returns successful results and errors separately.
  *
  * @param {File[]} files - Array of files to compress
@@ -117,23 +121,36 @@ export const compressImage = (file, options = {}) => {
  * @returns {Promise<{ results: Array, errors: Array }>}
  */
 export const compressImageBatch = async (files, onProgress = null) => {
-  const results = []
-  const errors  = []
   let completed = 0
+  const results = []
+  const errors = []
 
-  const promises = files.map(async (file) => {
+  // Procesamiento secuencial para proteger la memoria RAM en teléfonos móviles
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i]
     try {
       const result = await compressImage(file)
-      results.push({ file, ...result })
+      results.push({
+        file,
+        blob: result.blob,
+        previewUrl: result.previewUrl,
+        originalSizeKB: result.originalSizeKB,
+        compressedSizeKB: result.compressedSizeKB,
+        quality: result.quality,
+        index: i,
+      })
     } catch (err) {
-      errors.push({ file, error: err.message })
+      errors.push({
+        file,
+        error: err.message,
+        index: i,
+      })
     } finally {
       completed++
       if (onProgress) onProgress(completed, files.length)
     }
-  })
+  }
 
-  await Promise.all(promises)
   return { results, errors }
 }
 

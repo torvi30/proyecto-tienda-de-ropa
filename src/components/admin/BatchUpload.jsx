@@ -1,7 +1,8 @@
 import { useState, useRef, useCallback } from 'react'
 import {
   Upload, X, CheckCircle, AlertCircle, Loader2,
-  ImagePlus, Zap, ChevronRight, Plus, ZoomIn, Move
+  ImagePlus, Zap, ChevronRight, Plus, ZoomIn, Move,
+  Sparkles, ChevronDown, ChevronUp, Check
 } from 'lucide-react'
 import useImageCompressor from '../../hooks/useImageCompressor'
 import useCategories from '../../hooks/useCategories'
@@ -14,22 +15,35 @@ import toast from 'react-hot-toast'
 
 const MAX_FILES = 20
 
+// Safe ID generator that works in HTTP, older mobile browsers and WebViews
+const generateId = () => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+  return `item_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
+}
+
 // Initial state generator for each batch item
-const makeItem = (file, previewUrl, compressedSizeKB, originalSizeKB) => ({
-  id: crypto.randomUUID(),
-  file,
-  previewUrl,
-  compressedSizeKB,
-  originalSizeKB,
-  // Form input values
-  name: file.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' '),
-  price: '',
-  categoryId: '',
-  sizes: [],
-  // Status lifecycle: idle | uploading | done | error
-  status: 'idle',
-  error: null,
-})
+const makeItem = (file, blob, previewUrl, compressedSizeKB, originalSizeKB) => {
+  const rawName = file?.name ? file.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ') : ''
+  const isGeneric = /^(image|img|photo|foto|dsc|p)[0-9_-]*$/i.test(rawName.trim())
+  const initialName = isGeneric ? '' : rawName
+
+  return {
+    id: generateId(),
+    file,
+    blob, // WebP compressed blob
+    previewUrl,
+    compressedSizeKB,
+    originalSizeKB,
+    name: initialName,
+    price: '',
+    categoryId: '',
+    sizes: [],
+    status: 'idle',
+    error: null,
+  }
+}
 
 const BatchUpload = ({ onSuccess }) => {
   const [items, setItems] = useState([])
@@ -42,13 +56,81 @@ const BatchUpload = ({ onSuccess }) => {
   const [creatingCat, setCreatingCat] = useState(false)
   const [zoomModalItemIndex, setZoomModalItemIndex] = useState(null)
   const fileInputRef = useRef(null)
-  const { compressBatch } = useImageCompressor()
+  const { compressBatch, compress } = useImageCompressor()
   const { categories } = useCategories()
+
+  // Configuración rápida de valores por lote (Fast Fill)
+  const [bulkPrice, setBulkPrice] = useState('')
+  const [bulkCategoryId, setBulkCategoryId] = useState('')
+  const [bulkSizes, setBulkSizes] = useState([])
+  const [showBulkPresets, setShowBulkPresets] = useState(true)
+
+  // Aplicar configuración por lote a las fotos
+  const applyBulkPreset = (overwrite = false) => {
+    let affected = 0
+    setItems((prev) =>
+      prev.map((item) => {
+        if (item.status !== 'idle') return item
+
+        const shouldPrice = bulkPrice && (overwrite || !item.price)
+        const shouldCat = bulkCategoryId && (overwrite || !item.categoryId)
+        const shouldSizes = bulkSizes.length > 0 && (overwrite || item.sizes.length === 0)
+
+        if (shouldPrice || shouldCat || shouldSizes) {
+          affected++
+          return {
+            ...item,
+            price: shouldPrice ? bulkPrice : item.price,
+            categoryId: shouldCat ? bulkCategoryId : item.categoryId,
+            sizes: shouldSizes ? [...bulkSizes] : item.sizes,
+          }
+        }
+        return item
+      })
+    )
+
+    if (affected > 0) {
+      toast.success(`¡Configuración aplicada a ${affected} foto(s)! ⚡`, { icon: '⚡' })
+    } else {
+      toast('No hay fotos vacías para actualizar', { icon: 'ℹ️' })
+    }
+  }
+
+  // Reemplazar foto individual de un producto del lote sin perder datos del formulario
+  const handleReplacePhoto = async (itemId, newFile) => {
+    if (!newFile || !newFile.type.startsWith('image/')) {
+      toast.error('Selecciona una imagen válida (JPG, PNG, WebP)')
+      return
+    }
+
+    const toastId = toast.loading('Comprimiendo nueva foto a WebP...')
+    try {
+      const res = await compress(newFile)
+      setItems((prev) =>
+        prev.map((it) => {
+          if (it.id !== itemId) return it
+          if (it.previewUrl) URL.revokeObjectURL(it.previewUrl)
+          return {
+            ...it,
+            file: newFile,
+            blob: res.blob,
+            previewUrl: res.previewUrl,
+            compressedSizeKB: res.compressedSizeKB,
+            originalSizeKB: res.originalSizeKB,
+          }
+        })
+      )
+      toast.success('¡Foto actualizada correctamente!', { id: toastId, icon: '✨' })
+    } catch (err) {
+      console.error(err)
+      toast.error('Error al procesar la foto', { id: toastId })
+    }
+  }
 
   // Process selected files from picker or drop event
   const processFiles = useCallback(async (files) => {
     const validFiles = Array.from(files)
-      .filter((f) => f.type.startsWith('image/'))
+      .filter((f) => f && f.type && f.type.startsWith('image/'))
       .slice(0, MAX_FILES - items.length)
 
     if (validFiles.length === 0) {
@@ -67,8 +149,8 @@ const BatchUpload = ({ onSuccess }) => {
       toast.error(`${errors.length} imagen(es) no pudieron comprimirse`)
     }
 
-    const newItems = results.map(({ file, previewUrl, compressedSizeKB, originalSizeKB }) =>
-      makeItem(file, previewUrl, compressedSizeKB, originalSizeKB)
+    const newItems = results.map(({ file, blob, previewUrl, compressedSizeKB, originalSizeKB }) =>
+      makeItem(file, blob, previewUrl, compressedSizeKB, originalSizeKB)
     )
 
     setItems((prev) => [...prev, ...newItems])
@@ -177,8 +259,9 @@ const BatchUpload = ({ onSuccess }) => {
       )
 
       try {
-        // 1. Upload compressed WebP image to Cloudinary
-        const uploadRes = await uploadToCloudinary(item.file, item.name)
+        // 1. Upload compressed WebP image to Cloudinary (use compressed blob for speed and lightness)
+        const fileToUpload = item.blob || item.file
+        const uploadRes = await uploadToCloudinary(fileToUpload, item.name)
         const imageUrl = uploadRes.secure_url
 
         // 2. Create document in Firestore
@@ -249,7 +332,12 @@ const BatchUpload = ({ onSuccess }) => {
             accept='image/*'
             multiple
             className='hidden'
-            onChange={(e) => processFiles(e.target.files)}
+            onChange={(e) => {
+              if (e.target.files && e.target.files.length > 0) {
+                processFiles(e.target.files)
+              }
+              e.target.value = ''
+            }}
           />
 
           {isCompressing ? (
@@ -327,6 +415,114 @@ const BatchUpload = ({ onSuccess }) => {
         </div>
       )}
 
+      {/* ⚡ Barra de Configuración Rápida / Copiar a todo el lote */}
+      {items.length > 1 && (
+        <div className='bg-gradient-to-r from-gray-900/90 via-brand-950/20 to-gray-900/90 border border-brand-500/30 rounded-2xl p-4 sm:p-5 shadow-xl space-y-3.5 animate-fade-in'>
+          <div className='flex items-center justify-between'>
+            <div className='flex items-center gap-2'>
+              <div className='w-7 h-7 rounded-lg bg-brand-500/20 border border-brand-500/35 flex items-center justify-center text-brand-300'>
+                <Zap size={15} />
+              </div>
+              <div>
+                <h4 className='text-gray-100 font-semibold text-xs sm:text-sm flex items-center gap-2'>
+                  <span>Configuración Rápida del Lote</span>
+                  <span className='text-[10px] font-normal px-2 py-0.5 rounded-full bg-brand-500/20 text-brand-300 border border-brand-500/30'>
+                    Ahorro de tiempo
+                  </span>
+                </h4>
+                <p className='text-gray-400 text-[11px] hidden sm:block'>
+                  Define el precio, categoría o tallas una sola vez y aplícalos a todas las prendas vacías del lote.
+                </p>
+              </div>
+            </div>
+
+            <button
+              type='button'
+              onClick={() => setShowBulkPresets((prev) => !prev)}
+              className='text-xs font-semibold text-brand-400 hover:text-brand-300 transition-colors flex items-center gap-1 select-none cursor-pointer'
+            >
+              <span>{showBulkPresets ? 'Ocultar' : 'Configurar'}</span>
+              {showBulkPresets ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            </button>
+          </div>
+
+          {showBulkPresets && (
+            <div className='pt-2 border-t border-gray-800/80 space-y-3 animate-fade-in'>
+              <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
+                {/* Precio común */}
+                <div>
+                  <label className='text-gray-400 text-[11px] font-semibold uppercase tracking-wider block mb-1'>
+                    Precio Común (COP)
+                  </label>
+                  <input
+                    type='number'
+                    value={bulkPrice}
+                    onChange={(e) => setBulkPrice(e.target.value)}
+                    placeholder='Ej: 85000'
+                    min='0'
+                    step='100'
+                    className='form-input text-xs py-2 bg-gray-950/80'
+                  />
+                </div>
+
+                {/* Categoría común */}
+                <div>
+                  <label className='text-gray-400 text-[11px] font-semibold uppercase tracking-wider block mb-1'>
+                    Categoría Común
+                  </label>
+                  <select
+                    value={bulkCategoryId}
+                    onChange={(e) => setBulkCategoryId(e.target.value)}
+                    className='form-input text-xs py-2 bg-gray-950/80'
+                  >
+                    <option value=''>Seleccionar categoría...</option>
+                    {categories.map((cat) => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Tallas comunes */}
+              <div>
+                <label className='text-gray-400 text-[11px] font-semibold uppercase tracking-wider block mb-1'>
+                  Tallas o Medidas Comunes
+                </label>
+                <SizeMeasurePicker
+                  selected={bulkSizes}
+                  onChange={setBulkSizes}
+                />
+              </div>
+
+              {/* Botones de acción para aplicar */}
+              <div className='flex items-center justify-end gap-2 pt-1'>
+                <button
+                  type='button'
+                  onClick={() => applyBulkPreset(false)}
+                  disabled={!bulkPrice && !bulkCategoryId && bulkSizes.length === 0}
+                  className='px-3.5 py-2 rounded-xl bg-brand-600/30 hover:bg-brand-600/40 border border-brand-500/40 text-brand-200 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed'
+                >
+                  <Sparkles size={13} />
+                  <span>Aplicar a fotos vacías</span>
+                </button>
+
+                <button
+                  type='button'
+                  onClick={() => applyBulkPreset(true)}
+                  disabled={!bulkPrice && !bulkCategoryId && bulkSizes.length === 0}
+                  className='px-3.5 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold flex items-center gap-1.5 transition-all shadow-md shadow-brand-600/20 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed'
+                >
+                  <Check size={13} />
+                  <span>Sobreescribir en todas</span>
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Batch items list */}
       <div className='space-y-4'>
         {items.map((item, index) => (
@@ -365,6 +561,28 @@ const BatchUpload = ({ onSuccess }) => {
                     {item.compressedSizeKB}KB
                   </div>
                 </div>
+
+                {/* Inline button to replace photo of this specific card */}
+                {item.status === 'idle' && (
+                  <label
+                    className='mt-1.5 flex items-center justify-center gap-1 text-[11px] text-brand-300 hover:text-white bg-brand-600/20 hover:bg-brand-600/35 border border-brand-500/30 px-2 py-1 rounded-xl cursor-pointer transition-colors shadow-sm'
+                    title='Cambiar esta foto por otra imagen'
+                  >
+                    <ImagePlus size={12} />
+                    <span>Cambiar</span>
+                    <input
+                      type='file'
+                      accept='image/*'
+                      className='hidden'
+                      onChange={(e) => {
+                        if (e.target.files?.[0]) {
+                          handleReplacePhoto(item.id, e.target.files[0])
+                        }
+                        e.target.value = ''
+                      }}
+                    />
+                  </label>
+                )}
 
                 {/* Mobile remove button */}
                 {item.status === 'idle' && (
@@ -550,15 +768,21 @@ const BatchUpload = ({ onSuccess }) => {
 
       {/* Interactive 4:5 Photo Framing & Preview Modal */}
       <ImageZoomModal
-        isOpen={zoomModalItemIndex !== null}
+        isOpen={zoomModalItemIndex !== null && !!items[zoomModalItemIndex]}
         onClose={() => setZoomModalItemIndex(null)}
-        images={items.map((it) => ({
-          url: it.previewUrl,
-          name: it.name || 'Prenda en lote',
-          sizeKB: it.compressedSizeKB,
-          originalFile: it.file,
-        }))}
-        initialIndex={zoomModalItemIndex || 0}
+        images={
+          zoomModalItemIndex !== null && items[zoomModalItemIndex]
+            ? [
+                {
+                  url: items[zoomModalItemIndex].previewUrl,
+                  name: items[zoomModalItemIndex].name || 'Prenda en lote',
+                  sizeKB: items[zoomModalItemIndex].compressedSizeKB,
+                  originalFile: items[zoomModalItemIndex].file,
+                },
+              ]
+            : []
+        }
+        initialIndex={0}
         isAdmin={true}
         onApplyFrame={(newBlob, newPreviewUrl, newSizeKB) => {
           if (zoomModalItemIndex !== null && items[zoomModalItemIndex]) {
@@ -572,6 +796,7 @@ const BatchUpload = ({ onSuccess }) => {
                 it.id === targetId
                   ? {
                       ...it,
+                      blob: newBlob,
                       file: new File([newBlob], it.file?.name || 'prenda.webp', { type: 'image/webp' }),
                       previewUrl: newPreviewUrl,
                       compressedSizeKB: newSizeKB,

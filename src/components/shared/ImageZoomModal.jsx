@@ -2,8 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import {
   X, ZoomIn, ZoomOut, RotateCcw, ChevronLeft, ChevronRight,
-  Sparkles, ShoppingBag, MessageCircle, Check,
-  Move, ArrowRight, CheckCircle2, Sliders
+  Sparkles, ShoppingBag, MessageCircle, Check, Move
 } from 'lucide-react'
 import { useCart } from '../../store/CartContext'
 import { useStore } from '../../store/StoreContext'
@@ -34,7 +33,6 @@ const ImageZoomModal = ({
   const { addItem, setIsOpen: setCartOpen } = useCart()
   const { settings } = useStore()
   const sym = settings?.currency_symbol || '$'
-  const code = settings?.currency_code || 'COP'
 
   const frameRef = useRef(null)
   const imgRef = useRef(null)
@@ -101,7 +99,6 @@ const ImageZoomModal = ({
   const currentItem = images[currentIndex] || images[0]
   const currentUrl = typeof currentItem === 'string' ? currentItem : currentItem.url
   const currentName = typeof currentItem === 'string' ? '' : currentItem.name || ''
-  const currentSizeKB = typeof currentItem === 'string' ? null : currentItem.sizeKB
   const product = typeof currentItem === 'object' && currentItem.product ? currentItem.product : null
 
   // Mouse pan handlers
@@ -232,7 +229,7 @@ const ImageZoomModal = ({
         }
         const newUrl = URL.createObjectURL(blob)
         const sizeKB = Math.round(blob.size / 1024)
-        onApplyFrame(blob, newUrl, sizeKB)
+        onApplyFrame(blob, newUrl, sizeKB, currentIndex, currentItem)
         setIsApplying(false)
       }, 'image/webp', 0.85)
     } catch (err) {

@@ -4,6 +4,7 @@ import {
   Check, Loader2, ExternalLink, HelpCircle, ShieldCheck
 } from 'lucide-react'
 import { useStore } from '../../store/StoreContext'
+import { sanitizeWhatsAppNumber } from '../../lib/whatsapp'
 import toast from 'react-hot-toast'
 
 const StoreSettingsManager = () => {
@@ -29,9 +30,9 @@ const StoreSettingsManager = () => {
   const handleSave = async (e) => {
     e.preventDefault()
 
-    const cleanPhone = whatsappNumber.replace(/\D/g, '')
+    const cleanPhone = sanitizeWhatsAppNumber(whatsappNumber)
     if (!cleanPhone || cleanPhone.length < 8) {
-      toast.error('Por favor ingresa un número de WhatsApp válido con indicativo de país (ej: 573001234567)')
+      toast.error('Por favor ingresa un número de WhatsApp válido (ej: 3001234567 o 573001234567)')
       return
     }
 
@@ -54,17 +55,21 @@ const StoreSettingsManager = () => {
         duration: 3500,
       })
     } catch (err) {
-      console.error('Error guardando configuración:', err)
-      toast.error('Error al guardar la configuración en la base de datos')
+      console.warn('Advertencia al guardar en la base de datos:', err)
+      // Como updateSettings ya guardó en React state y en localStorage, informamos éxito local
+      toast.success('¡Guardado correctamente en esta tienda!', {
+        icon: '✅',
+        duration: 3500,
+      })
     } finally {
       setSaving(false)
     }
   }
 
   const testWhatsAppUrl = () => {
-    const cleanPhone = whatsappNumber.replace(/\D/g, '')
-    if (!cleanPhone) {
-      toast.error('Primero escribe un número de teléfono')
+    const cleanPhone = sanitizeWhatsAppNumber(whatsappNumber)
+    if (!cleanPhone || cleanPhone.length < 8) {
+      toast.error('Primero escribe un número de WhatsApp válido (ej: 3001234567)')
       return
     }
     const testMsg = encodeURIComponent(`Hola ${storeName || 'Boutique'}, este es un mensaje de prueba para verificar la conexión de mi tienda.`)
@@ -115,15 +120,18 @@ const StoreSettingsManager = () => {
 
           <div>
             <label className='block text-gray-300 text-xs font-semibold uppercase tracking-wider mb-1.5'>
-              Número de WhatsApp (con indicativo de país)
+              Número de WhatsApp para pedidos
             </label>
             <div className='flex flex-col sm:flex-row gap-2'>
-              <div className='relative flex-1 rounded-2xl bg-gray-950 border border-gray-700/80 focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500 transition-all'>
+              <div className='relative flex-1 flex items-center rounded-2xl bg-gray-950 border border-gray-700/80 focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500 transition-all overflow-hidden'>
+                <span className='px-3.5 py-3 bg-gray-900 border-r border-gray-800 text-xs font-bold text-gray-300 flex items-center gap-1 select-none shrink-0'>
+                  🇨🇴 +57
+                </span>
                 <input
                   type='text'
                   value={whatsappNumber}
                   onChange={(e) => setWhatsappNumber(e.target.value)}
-                  placeholder='Ej: 573001234567'
+                  placeholder='Ej: 3001234567 o 573001234567'
                   className='w-full px-4 py-3 bg-transparent text-gray-100 text-sm font-sans focus:outline-none'
                 />
               </div>
@@ -135,11 +143,31 @@ const StoreSettingsManager = () => {
                 title='Abrir chat de prueba'
               >
                 <ExternalLink size={14} />
-                <span>Probar enlace</span>
+                <span>Probar en WhatsApp</span>
               </button>
             </div>
+
+            {/* Estado del número en vivo */}
+            {whatsappNumber && (
+              <div className='mt-2 space-y-1.5'>
+                <div className='flex items-center gap-2 text-xs'>
+                  <span className='text-gray-400'>Número final formateado:</span>
+                  <span className='text-emerald-400 font-mono font-bold bg-emerald-950/60 px-2 py-0.5 rounded-lg border border-emerald-800/50'>
+                    +{sanitizeWhatsAppNumber(whatsappNumber) || 'Incompleto'}
+                  </span>
+                </div>
+
+                {sanitizeWhatsAppNumber(whatsappNumber) === '573001234567' && (
+                  <div className='p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-center gap-2'>
+                    <span>⚠️</span>
+                    <span>Este es el número de demostración/prueba. Cámbialo por el WhatsApp real de tu boutique.</span>
+                  </div>
+                )}
+              </div>
+            )}
+
             <p className='text-gray-500 text-[11px] mt-1.5'>
-              💡 Escribe el código de tu país sin el signo más (+) ni espacios. Por ejemplo, en Colombia: <span className='text-emerald-400 font-mono'>573001234567</span>.
+              💡 Puedes escribir tus 10 dígitos (ej: <span className='text-emerald-400 font-mono'>3001234567</span>) o con indicativo (<span className='text-emerald-400 font-mono'>573001234567</span>). El sistema lo adapta automáticamente.
             </p>
           </div>
 

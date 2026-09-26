@@ -1,9 +1,10 @@
-import { useState } from 'react'
-import { ShoppingBag, Check, Flame, Star, ZoomIn } from 'lucide-react'
+import { useState, useMemo } from 'react'
+import { ShoppingBag, Check, Flame, Star, ZoomIn, Sparkles, MessageCircle, Share2 } from 'lucide-react'
 import StockBadge from '../shared/StockBadge'
 import ImageZoomModal from '../shared/ImageZoomModal'
 import { useCart } from '../../store/CartContext'
 import { useStore } from '../../store/StoreContext'
+import { openWhatsAppCheckout } from '../../lib/whatsapp'
 import toast from 'react-hot-toast'
 
 const ProductCard = ({ product }) => {
@@ -18,6 +19,24 @@ const ProductCard = ({ product }) => {
   const [justAdded, setJustAdded] = useState(false)
 
   const currencySymbol = settings?.currency_symbol || '$'
+
+  // Detectar si la prenda es recién llegada (subida en los últimos 7 días)
+  const isNewArrival = useMemo(() => {
+    if (!product?.created_at) return false
+    try {
+      const createdTime = product.created_at?.toDate
+        ? product.created_at.toDate().getTime()
+        : product.created_at?.seconds
+        ? product.created_at.seconds * 1000
+        : new Date(product.created_at).getTime()
+
+      if (isNaN(createdTime)) return false
+      const diffMs = Date.now() - createdTime
+      return diffMs >= 0 && diffMs < 7 * 24 * 60 * 60 * 1000
+    } catch {
+      return false
+    }
+  }, [product?.created_at])
 
   const hasPromo = product?.is_on_sale && product?.original_price > product?.price
   const discount = hasPromo
@@ -61,6 +80,62 @@ const ProductCard = ({ product }) => {
     )
   }
 
+  // Compra directa e inmediata por WhatsApp
+  const handleDirectWhatsApp = (e) => {
+    e.stopPropagation()
+    const sizeToUse = selectedSize || (product?.sizes?.length === 1 ? product.sizes[0] : null)
+    if (!sizeToUse && product?.sizes?.length > 1) {
+      setHighlightSize(true)
+      setTimeout(() => setHighlightSize(false), 800)
+      toast.error('Elige tu talla antes de pedir por WhatsApp', { icon: '📏' })
+      return
+    }
+
+    try {
+      openWhatsAppCheckout(
+        [
+          {
+            product,
+            size: sizeToUse || 'Única',
+            quantity: 1,
+          },
+        ],
+        settings
+      )
+      toast.success('¡Abriendo WhatsApp para tu pedido! 🎉')
+    } catch (err) {
+      toast.error(err.message || 'Error al conectar con WhatsApp')
+    }
+  }
+
+  // Compartir enlace directo de la prenda
+  const handleShare = async (e) => {
+    e.stopPropagation()
+    const storeTitle = settings?.store_name || 'Boutique'
+    const shareText = `¡Mira este(a) ${product.name} en ${storeTitle}! ${currencySymbol}${Number(product.price).toLocaleString('es-CO')}`
+    const shareUrl = `${window.location.origin}/#product-${product.id}`
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: product.name,
+          text: shareText,
+          url: shareUrl,
+        })
+        return
+      } catch (err) {
+        if (err.name === 'AbortError') return
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(`${shareText}\n${shareUrl}`)
+      toast.success('¡Enlace de la prenda copiado!', { icon: '📋' })
+    } catch {
+      toast.error('No se pudo copiar el enlace')
+    }
+  }
+
   return (
     <article
       className={`product-card group flex flex-col rounded-2xl overflow-hidden transition-all duration-300 ${
@@ -100,8 +175,18 @@ const ProductCard = ({ product }) => {
           <StockBadge status={product.stock_status} />
         </div>
 
-        {/* Promotional / Top featured badges */}
-        <div className='absolute top-2.5 right-2.5 z-10 flex items-center gap-1.5 animate-scale-in'>
+        {/* Promotional / Top featured / New arrival badges */}
+        <div className='absolute top-2.5 right-2.5 z-10 flex flex-wrap justify-end gap-1.5 animate-scale-in max-w-[70%]'>
+          {isNewArrival && (
+            <span
+              className='inline-flex items-center gap-1 bg-gradient-to-r from-violet-600 via-indigo-600 to-purple-600 text-white font-bold text-[10px] px-2.5 py-0.5 rounded-full shadow-lg shadow-purple-600/30 uppercase tracking-wider select-none border border-violet-400/40'
+              title='Prenda de la nueva colección'
+            >
+              <Sparkles size={11} className='text-amber-300 fill-current animate-pulse' />
+              <span>Nuevo</span>
+            </span>
+          )}
+
           {hasPromo && (
             <span className='inline-flex items-center gap-1 bg-gradient-to-r from-pink-500 via-rose-500 to-pink-600 text-white font-bold text-[11px] px-2.5 py-0.5 rounded-full shadow-lg shadow-pink-500/30 uppercase tracking-wider select-none'>
               <Flame size={12} className='fill-current' />
@@ -109,13 +194,13 @@ const ProductCard = ({ product }) => {
             </span>
           )}
 
-          {product?.is_featured && (
+          {product?.is_featured && !hasPromo && (
             <span
               className='inline-flex items-center gap-1 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 text-gray-950 font-bold text-[10px] px-2 py-0.5 rounded-full shadow-lg shadow-amber-500/25 uppercase tracking-wider select-none'
               title='Prenda destacada'
             >
               <Star size={11} className='fill-current' />
-              <span className={hasPromo ? 'hidden sm:inline' : 'inline'}>Top</span>
+              <span>Top</span>
             </span>
           )}
         </div>
@@ -214,32 +299,55 @@ const ProductCard = ({ product }) => {
           </div>
         )}
 
-        {/* Unified add-to-bag button */}
-        <button
-          onClick={handleAddToCart}
-          id={`add-to-cart-${product.id}`}
-          className={`mt-auto w-full py-2.5 sm:py-3 px-4 rounded-xl text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer ${
-            justAdded
-              ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/30 scale-[1.02]'
-              : selectedSize
-              ? 'bg-gradient-to-r from-brand-600 via-purple-600 to-brand-500 hover:from-brand-500 hover:to-purple-500 text-white shadow-xl shadow-brand-500/30 ring-2 ring-brand-400/30 active:scale-[0.98]'
-              : 'bg-gray-800 hover:bg-gray-700/80 text-gray-200 border border-gray-700 active:scale-[0.98]'
-          }`}
-        >
-          {justAdded ? (
-            <>
-              <Check size={16} className='text-emerald-200 animate-scale-in' />
-              <span className='font-bold'>¡Agregado a tu bolsa!</span>
-            </>
-          ) : (
-            <>
-              <ShoppingBag size={16} className={selectedSize ? 'text-white' : 'text-gray-400'} />
-              <span>
-                {selectedSize ? `Agregar • ${selectedSize}` : 'Agregar al carrito'}
-              </span>
-            </>
-          )}
-        </button>
+        {/* Unified action buttons row: Add to cart + Direct WhatsApp + Share */}
+        <div className='mt-auto flex items-center gap-2 pt-1'>
+          <button
+            onClick={handleAddToCart}
+            id={`add-to-cart-${product.id}`}
+            className={`flex-1 py-2.5 sm:py-3 px-3 rounded-xl text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 transition-all duration-200 cursor-pointer ${
+              justAdded
+                ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/30 scale-[1.02]'
+                : selectedSize
+                ? 'bg-gradient-to-r from-brand-600 via-purple-600 to-brand-500 hover:from-brand-500 hover:to-purple-500 text-white shadow-xl shadow-brand-500/30 ring-1 ring-brand-400/40 active:scale-[0.98]'
+                : 'bg-gray-800 hover:bg-gray-700/80 text-gray-200 border border-gray-700 active:scale-[0.98]'
+            }`}
+          >
+            {justAdded ? (
+              <>
+                <Check size={16} className='text-emerald-200 animate-scale-in' />
+                <span className='font-bold'>¡Agregado!</span>
+              </>
+            ) : (
+              <>
+                <ShoppingBag size={15} className={selectedSize ? 'text-white' : 'text-gray-400'} />
+                <span>
+                  {selectedSize ? `Agregar • ${selectedSize}` : 'Agregar a la bolsa'}
+                </span>
+              </>
+            )}
+          </button>
+
+          {/* Quick Direct WhatsApp checkout button */}
+          <button
+            type='button'
+            onClick={handleDirectWhatsApp}
+            className='p-2.5 sm:py-3 sm:px-3 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 hover:border-emerald-400 text-emerald-400 rounded-xl transition-all flex items-center justify-center gap-1.5 text-xs font-semibold shrink-0 active:scale-95 cursor-pointer'
+            title='Pedir directamente por WhatsApp'
+          >
+            <MessageCircle size={16} />
+            <span className='hidden sm:inline'>Pedir ya</span>
+          </button>
+
+          {/* Share button */}
+          <button
+            type='button'
+            onClick={handleShare}
+            className='p-2.5 sm:p-3 bg-gray-800/80 hover:bg-gray-800 border border-gray-700 hover:border-gray-600 text-gray-400 hover:text-gray-200 rounded-xl transition-all flex items-center justify-center shrink-0 active:scale-95 cursor-pointer'
+            title='Compartir enlace de esta prenda'
+          >
+            <Share2 size={15} />
+          </button>
+        </div>
       </div>
 
       {/* Previsualizador y Zoom interactivo estilo Shein */}

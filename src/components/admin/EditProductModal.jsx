@@ -1,10 +1,15 @@
 import { useState } from 'react'
-import { X, Check, Loader2, Sparkles, Tag, DollarSign, Layers, Plus, Flame, Percent, Star } from 'lucide-react'
+import {
+  X, Check, Loader2, Sparkles, Tag, DollarSign,
+  Layers, Plus, Flame, Percent, Star, ImagePlus, Undo2
+} from 'lucide-react'
 import { db } from '../../lib/firebaseClient'
 import { doc, updateDoc, collection, addDoc, serverTimestamp } from 'firebase/firestore'
 import toast from 'react-hot-toast'
 import { useStore } from '../../store/StoreContext'
 import useCategories from '../../hooks/useCategories'
+import useImageCompressor from '../../hooks/useImageCompressor'
+import { uploadToCloudinary } from '../../lib/cloudinary'
 import SizeMeasurePicker from './SizeMeasurePicker'
 
 const EditProductModal = ({ product, onClose, onSaveSuccess }) => {
@@ -39,6 +44,44 @@ const EditProductModal = ({ product, onClose, onSaveSuccess }) => {
   const [newCatName, setNewCatName] = useState('')
   const [creatingCat, setCreatingCat] = useState(false)
 
+  // Cambio de foto para el producto existente
+  const [newImageFile, setNewImageFile] = useState(null)
+  const [newImagePreview, setNewImagePreview] = useState(null)
+  const [compressingImage, setCompressingImage] = useState(false)
+  const { compress } = useImageCompressor()
+
+  const handleSelectNewImage = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!file.type.startsWith('image/')) {
+      toast.error('Selecciona una imagen válida (JPG, PNG, WebP)')
+      return
+    }
+
+    setCompressingImage(true)
+    const toastId = toast.loading('Comprimiendo nueva foto a WebP...')
+    try {
+      const res = await compress(file)
+      if (newImagePreview) URL.revokeObjectURL(newImagePreview)
+      setNewImageFile(res.blob || file)
+      setNewImagePreview(res.previewUrl)
+      toast.success('Nueva foto lista para guardar', { id: toastId, icon: '✨' })
+    } catch (err) {
+      console.error(err)
+      toast.error('Error al procesar la foto', { id: toastId })
+    } finally {
+      setCompressingImage(false)
+      e.target.value = ''
+    }
+  }
+
+  const handleRevertImage = () => {
+    if (newImagePreview) URL.revokeObjectURL(newImagePreview)
+    setNewImageFile(null)
+    setNewImagePreview(null)
+    toast('Se restauró la foto original', { icon: '↩️' })
+  }
+
   if (!product) return null
 
   const toggleSize = (size) => {
@@ -66,6 +109,20 @@ const EditProductModal = ({ product, onClose, onSaveSuccess }) => {
     const origPriceNum = parseFloat(originalPrice)
     const validOrigPrice = isOnSale && !isNaN(origPriceNum) && origPriceNum > 0 ? origPriceNum : null
 
+    // Subir nueva foto a Cloudinary si se seleccionó una
+    let finalImageUrl = product.image_url
+    if (newImageFile) {
+      try {
+        const uploadRes = await uploadToCloudinary(newImageFile, name.trim())
+        finalImageUrl = uploadRes.secure_url
+      } catch (err) {
+        console.error('Error subiendo nueva imagen:', err)
+        toast.error('Error al subir la nueva imagen a la nube')
+        setSaving(false)
+        return
+      }
+    }
+
     try {
       if (db) {
         await updateDoc(doc(db, 'products', product.id), {
@@ -76,6 +133,7 @@ const EditProductModal = ({ product, onClose, onSaveSuccess }) => {
           is_featured: Boolean(isFeatured),
           category_id: categoryId || null,
           sizes,
+          image_url: finalImageUrl,
           stock_status: stockStatus,
           is_visible: isVisible,
         })
@@ -92,6 +150,7 @@ const EditProductModal = ({ product, onClose, onSaveSuccess }) => {
           is_featured: Boolean(isFeatured),
           category_id: categoryId || null,
           sizes,
+          image_url: finalImageUrl,
           stock_status: stockStatus,
           is_visible: isVisible,
         })
@@ -154,21 +213,64 @@ const EditProductModal = ({ product, onClose, onSaveSuccess }) => {
         {/* Modal header */}
         <div className='relative flex items-center justify-between pb-4 sm:pb-5 border-b border-gray-800/80 mb-4 sm:mb-5 shrink-0'>
           <div className='flex items-center gap-3.5 min-w-0'>
-            <div className='w-12 h-14 rounded-xl overflow-hidden bg-gray-800 border border-gray-700/60 shrink-0 shadow-sm'>
+            {/* Thumbnail with interactive change button */}
+            <div className='relative group/img w-14 h-16 rounded-xl overflow-hidden bg-gray-800 border border-gray-700/60 shrink-0 shadow-sm'>
               <img
-                src={product.image_url}
+                src={newImagePreview || product.image_url}
                 alt={product.name}
                 className='w-full h-full object-cover'
               />
+              <label
+                className='absolute inset-0 bg-black/65 opacity-0 group-hover/img:opacity-100 flex flex-col items-center justify-center text-white cursor-pointer transition-opacity text-[10px] font-semibold gap-0.5'
+                title='Cambiar foto'
+              >
+                <ImagePlus size={14} className='text-brand-300' />
+                <span>Cambiar</span>
+                <input
+                  type='file'
+                  accept='image/*'
+                  className='hidden'
+                  onChange={handleSelectNewImage}
+                />
+              </label>
             </div>
+
             <div className='min-w-0'>
-              <div className='flex items-center gap-1.5 text-brand-400 text-xs font-semibold tracking-wider uppercase mb-0.5'>
-                <Sparkles size={12} />
-                <span>Edición de Prenda</span>
+              <div className='flex items-center gap-2 mb-0.5'>
+                <div className='flex items-center gap-1.5 text-brand-400 text-xs font-semibold tracking-wider uppercase'>
+                  <Sparkles size={12} />
+                  <span>Edición de Prenda</span>
+                </div>
+                {newImagePreview && (
+                  <span className='px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold'>
+                    Foto nueva ✓
+                  </span>
+                )}
               </div>
               <h2 className='text-gray-100 font-semibold text-base truncate'>
                 {product.name}
               </h2>
+              {newImagePreview ? (
+                <button
+                  type='button'
+                  onClick={handleRevertImage}
+                  className='text-[11px] text-pink-400 hover:text-pink-300 flex items-center gap-1 mt-0.5'
+                >
+                  <Undo2 size={12} />
+                  <span>Deshacer cambio de foto</span>
+                </button>
+              ) : (
+                <label className='text-[11px] text-brand-400 hover:text-brand-300 flex items-center gap-1 mt-0.5 cursor-pointer'>
+                  <ImagePlus size={12} />
+                  <span>Cambiar foto del producto</span>
+                  <input
+                    type='file'
+                    accept='image/*'
+                    className='hidden'
+                    onChange={handleSelectNewImage}
+                  />
+                </label>
+              )}
             </div>
           </div>
 

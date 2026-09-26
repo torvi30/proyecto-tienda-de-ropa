@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Flame } from 'lucide-react'
+import { Flame, ShoppingBag } from 'lucide-react'
 import useProducts from '../hooks/useProducts'
 import useCategories from '../hooks/useCategories'
 import { useStore } from '../store/StoreContext'
@@ -20,7 +20,29 @@ const CatalogPage = () => {
   const [selectedSize, setSelectedSize] = useState(null)
   const [onlySales, setOnlySales] = useState(false)
   const [onlyFeatured, setOnlyFeatured] = useState(false)
+  const [onlyNew, setOnlyNew] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+
+  // Función para determinar si una prenda es recién llegada (últimos 7 días)
+  const isProductNew = (p) => {
+    if (!p?.created_at) return false
+    try {
+      const createdTime = p.created_at?.toDate
+        ? p.created_at.toDate().getTime()
+        : p.created_at?.seconds
+        ? p.created_at.seconds * 1000
+        : new Date(p.created_at).getTime()
+      if (isNaN(createdTime)) return false
+      return Date.now() - createdTime < 7 * 24 * 60 * 60 * 1000
+    } catch {
+      return false
+    }
+  }
+
+  // Nuevas prendas de la colección (últimos 7 días)
+  const newProducts = useMemo(() => {
+    return products.filter(isProductNew)
+  }, [products])
 
   // Products with active promotional pricing
   const saleProducts = useMemo(() => {
@@ -41,16 +63,17 @@ const CatalogPage = () => {
       const matchesSize = !selectedSize || (p.sizes && p.sizes.includes(selectedSize))
       const matchesSale = !onlySales || (p.is_on_sale && p.original_price > p.price)
       const matchesFeatured = !onlyFeatured || p.is_featured
+      const matchesNew = !onlyNew || isProductNew(p)
       const matchesSearch = !query || (p.name && p.name.toLowerCase().includes(query))
-      return matchesCategory && matchesSize && matchesSale && matchesFeatured && matchesSearch
+      return matchesCategory && matchesSize && matchesSale && matchesFeatured && matchesNew && matchesSearch
     })
 
     return list.sort((a, b) => {
-      const scoreA = (a.is_featured ? 2 : 0) + (a.is_on_sale && a.original_price > a.price ? 1 : 0)
-      const scoreB = (b.is_featured ? 2 : 0) + (b.is_on_sale && b.original_price > b.price ? 1 : 0)
+      const scoreA = (a.is_featured ? 3 : 0) + (isProductNew(a) ? 2 : 0) + (a.is_on_sale && a.original_price > a.price ? 1 : 0)
+      const scoreB = (b.is_featured ? 3 : 0) + (isProductNew(b) ? 2 : 0) + (b.is_on_sale && b.original_price > b.price ? 1 : 0)
       return scoreB - scoreA // Higher score sorts to the top
     })
-  }, [products, selectedCategory, selectedSize, onlySales, onlyFeatured, searchQuery])
+  }, [products, selectedCategory, selectedSize, onlySales, onlyFeatured, onlyNew, searchQuery])
 
   const storeName = settings?.store_name || 'Boutique'
 
@@ -59,6 +82,7 @@ const CatalogPage = () => {
     setSelectedSize(null)
     setOnlySales(false)
     setOnlyFeatured(false)
+    setOnlyNew(false)
     setSearchQuery('')
   }
 
@@ -73,9 +97,12 @@ const CatalogPage = () => {
         onToggleSales={() => setOnlySales((prev) => !prev)}
         onlyFeatured={onlyFeatured}
         onToggleFeatured={() => setOnlyFeatured((prev) => !prev)}
+        onlyNew={onlyNew}
+        onToggleNew={() => setOnlyNew((prev) => !prev)}
         onResetFilters={handleResetFilters}
         saleCount={saleProducts.length}
         featuredCount={featuredProducts.length}
+        newCount={newProducts.length}
       />
 
       {/* Minimalist Hero Banner */}
@@ -102,12 +129,15 @@ const CatalogPage = () => {
         selectedSize={selectedSize}
         onlySales={onlySales}
         onlyFeatured={onlyFeatured}
+        onlyNew={onlyNew}
         onCategoryChange={setSelectedCategory}
         onSizeChange={setSelectedSize}
         onToggleSales={() => setOnlySales((prev) => !prev)}
         onToggleFeatured={() => setOnlyFeatured((prev) => !prev)}
+        onToggleNew={() => setOnlyNew((prev) => !prev)}
         saleCount={saleProducts.length}
         featuredCount={featuredProducts.length}
+        newCount={newProducts.length}
         totalVisible={filteredProducts.length}
       />
 

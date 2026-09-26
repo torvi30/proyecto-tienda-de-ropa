@@ -63,15 +63,38 @@ export const buildWhatsAppMessage = (items, settings, customerInfo = null) => {
 }
 
 /**
+ * Cleans and normalizes WhatsApp phone numbers.
+ * Removes non-digits, and auto-prepends Colombia country code 57 for 10-digit mobile numbers.
+ *
+ * @param {string|number} phone - Raw input phone number
+ * @returns {string} Digits-only international phone string
+ */
+export const sanitizeWhatsAppNumber = (phone) => {
+  if (!phone) return ''
+  let clean = String(phone).replace(/\D/g, '')
+  // Si tiene 10 dígitos y empieza por 3 (móvil colombiano estándar ej: 3001234567), anteponer 57
+  if (clean.length === 10 && clean.startsWith('3')) {
+    clean = `57${clean}`
+  }
+  return clean
+}
+
+/**
  * Opens WhatsApp with formatted order message
  * @param {Array} items - Cart items
  * @param {Object} settings - Store settings
  * @param {Object} [customerInfo] - Customer details
  */
 export const openWhatsAppCheckout = (items, settings, customerInfo = null) => {
-  const { whatsapp_number } = settings
+  const rawNumber = settings?.whatsapp_number
+  const cleanNumber = sanitizeWhatsAppNumber(rawNumber)
+
+  if (!cleanNumber || cleanNumber.length < 8) {
+    throw new Error('El número de WhatsApp no está configurado correctamente')
+  }
+
   const message = buildWhatsAppMessage(items, settings, customerInfo)
   const encoded = encodeURIComponent(message)
-  const url = `https://wa.me/${whatsapp_number}?text=${encoded}`
+  const url = `https://wa.me/${cleanNumber}?text=${encoded}`
   window.open(url, '_blank', 'noopener,noreferrer')
 }

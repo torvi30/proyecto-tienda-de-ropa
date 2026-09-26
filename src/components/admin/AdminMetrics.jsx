@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import {
   TrendingUp, DollarSign, Package, Flame, Star,
   AlertTriangle, Layers, Sparkles, ArrowUpRight,
-  CheckCircle2, Eye, EyeOff, Loader2, ArrowRight
+  CheckCircle2, Eye, EyeOff, Loader2, ArrowRight, MessageCircle
 } from 'lucide-react'
 import { db } from '../../lib/firebaseClient'
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore'
@@ -163,6 +163,42 @@ const AdminMetrics = ({ onNavigateTab }) => {
           <span className='w-2 h-2 rounded-full bg-emerald-400 animate-pulse' />
           <span>Sincronizado en tiempo real</span>
         </div>
+      </div>
+
+      {/* WhatsApp Reception Status Banner */}
+      <div className='flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 rounded-2xl bg-gradient-to-r from-emerald-950/40 via-gray-900/60 to-gray-900/40 border border-emerald-500/25'>
+        <div className='flex items-center gap-3'>
+          <div className='w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0'>
+            <MessageCircle size={20} />
+          </div>
+          <div>
+            <div className='flex items-center gap-2 flex-wrap'>
+              <span className='text-xs font-bold text-gray-200'>WhatsApp Receptor de Pedidos:</span>
+              <span className='text-xs font-mono font-bold text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded-md border border-emerald-800/60'>
+                +{settings?.whatsapp_number || 'No configurado'}
+              </span>
+              {settings?.whatsapp_number === '573001234567' && (
+                <span className='px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-bold'>
+                  Número Demo
+                </span>
+              )}
+            </div>
+            <p className='text-gray-400 text-xs mt-0.5'>
+              {settings?.whatsapp_number === '573001234567'
+                ? '⚠️ Tu tienda está usando el número demo. Configura tu número real para que te lleguen las ventas.'
+                : 'A este número llegan los carritos y pedidos automáticos de tus clientes.'}
+            </p>
+          </div>
+        </div>
+
+        <button
+          type='button'
+          onClick={() => onNavigateTab('settings')}
+          className='px-3.5 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 text-emerald-300 text-xs font-semibold flex items-center gap-1.5 transition-colors shrink-0'
+        >
+          <span>Cambiar WhatsApp</span>
+          <ArrowRight size={14} />
+        </button>
       </div>
 
       {/* 2. Main KPI Metric Cards (Glow & Glassmorphism) */}

@@ -39,12 +39,15 @@ export const uploadToCloudinary = async (file, fileName = 'producto') => {
   }
 
   const cleanName = sanitizeFileName(fileName)
+  // Suffix único para evitar colisiones, sobreescrituras o caché duplicada de fotos con nombres comunes
+  const uniqueSuffix = `${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 7)}`
+  const publicId = `${cleanName}-${uniqueSuffix}`
 
   const formData = new FormData()
-  formData.append('file', file, `${cleanName}.webp`)
+  formData.append('file', file, `${publicId}.webp`)
   formData.append('upload_preset', UPLOAD_PRESET)
   formData.append('folder', 'tienda_ropa/productos')
-  formData.append('public_id', cleanName)
+  formData.append('public_id', publicId)
 
   const endpoint = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`
 

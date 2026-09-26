@@ -15,9 +15,12 @@ const Navbar = ({
   onToggleSales,
   onlyFeatured,
   onToggleFeatured,
+  onlyNew,
+  onToggleNew,
   onResetFilters,
   saleCount = 0,
   featuredCount = 0,
+  newCount = 0,
 }) => {
   const { totalItems, setIsOpen } = useCart()
   const [showHowToBuy, setShowHowToBuy] = useState(false)
@@ -93,6 +96,23 @@ const Navbar = ({
             >
               Colección
             </button>
+
+            {newCount > 0 && (
+              <button
+                onClick={onToggleNew}
+                className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  onlyNew
+                    ? 'bg-violet-600 text-white shadow-md shadow-violet-600/30'
+                    : 'text-violet-400 hover:bg-violet-500/10'
+                }`}
+              >
+                <Sparkles size={14} className='text-amber-300 fill-current animate-pulse' />
+                <span>Nuevos</span>
+                <span className='ml-0.5 px-1.5 py-0.2 rounded-full text-[10px] bg-violet-500/20 text-violet-300 border border-violet-500/30'>
+                  {newCount}
+                </span>
+              </button>
+            )}
 
             {saleCount > 0 && (
               <button
