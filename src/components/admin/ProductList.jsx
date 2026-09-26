@@ -224,33 +224,45 @@ const ProductList = ({ refreshKey }) => {
     <div className='space-y-4'>
       <div className='flex items-center justify-between text-xs text-gray-500'>
         <p>{products.length} productos en total</p>
-        <p className='hidden sm:block text-brand-400/80'>💡 Tip: Haz clic en el precio o en el botón "Editar" para modificarlo</p>
+        <p className='text-brand-400/90 font-medium'>💡 Toca cualquier producto para abrir su foto y configurarlo</p>
       </div>
 
       {products.map((product) => (
         <div
           key={product.id}
-          className={`bg-gray-800/50 hover:bg-gray-800/70 border rounded-2xl overflow-hidden transition-all duration-200
-            ${!product.is_visible ? 'opacity-60 border-gray-700/50' : 'border-gray-700/80 hover:border-brand-500/30'}
+          className={`bg-gray-800/50 hover:bg-gray-800/80 border rounded-2xl overflow-hidden transition-all duration-200
+            ${!product.is_visible ? 'opacity-60 border-gray-700/50' : 'border-gray-700/80 hover:border-brand-500/40 hover:shadow-lg hover:shadow-brand-500/5'}
             ${deleteConfirm === product.id ? 'border-red-500/50' : ''}`}
         >
           <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 sm:p-4'>
-            {/* Image and product information container */}
-            <div className='flex items-center gap-3 sm:gap-4 min-w-0 flex-1'>
-              {/* Thumbnail image */}
-              <div className='w-16 h-20 rounded-xl overflow-hidden shrink-0 bg-gray-700 border border-gray-700/60 shadow-md'>
+            {/* Image and product information container - Touching opens the full configuration modal */}
+            <div
+              onClick={() => setEditingProduct(product)}
+              className='flex items-center gap-3 sm:gap-4 min-w-0 flex-1 cursor-pointer group/item select-none'
+              title='Toca para abrir foto y configurar este producto'
+            >
+              {/* Thumbnail image with visual touch overlay */}
+              <div className='relative w-16 h-20 rounded-xl overflow-hidden shrink-0 bg-gray-700 border border-gray-700/60 shadow-md group-hover/item:scale-105 group-hover/item:border-brand-400 transition-all'>
                 <img
                   src={product.image_url}
                   alt={product.name}
                   className='w-full h-full object-cover'
                 />
+                <div className='absolute inset-0 bg-black/45 opacity-0 group-hover/item:opacity-100 flex items-center justify-center text-white transition-opacity'>
+                  <Pencil size={15} className='text-brand-300' />
+                </div>
               </div>
 
               {/* Main information */}
               <div className='flex-1 min-w-0'>
-              <p className='text-gray-100 font-medium text-sm sm:text-base leading-snug truncate'>
-                {product.name}
-              </p>
+                <div className='flex items-center gap-2'>
+                  <p className='text-gray-100 font-semibold text-sm sm:text-base leading-snug truncate group-hover/item:text-brand-300 transition-colors'>
+                    {product.name}
+                  </p>
+                  <span className='text-[10px] text-brand-400 bg-brand-500/10 px-1.5 py-0.5 rounded-md border border-brand-500/25 shrink-0 font-medium sm:hidden'>
+                    Tocar para editar
+                  </span>
+                </div>
 
               {/* Price editing: inline form or standard display */}
               {inlineEditId === product.id ? (
