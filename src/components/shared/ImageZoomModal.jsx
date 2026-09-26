@@ -242,15 +242,15 @@ const ImageZoomModal = ({
   // Customer: Add to cart
   const handleQuickAdd = () => {
     if (!product) return
-    const sizeToUse = selectedSize || (product.sizes?.length === 1 ? product.sizes[0] : null)
-    if (!sizeToUse && product.sizes?.length > 0) {
+    const sizeToUse = selectedSize || (product.sizes?.length === 1 ? product.sizes[0] : (product.sizes?.length ? null : 'Única'))
+    if (!sizeToUse) {
       toast.error('Selecciona una talla para continuar', { icon: '📏' })
       return
     }
 
-    addItem(product, sizeToUse || 'Única', false)
+    addItem(product, sizeToUse, false)
     setJustAdded(true)
-    toast.success(`"${product.name}" (${sizeToUse || 'Única'}) agregada a tu bolsa`, {
+    toast.success(`"${product.name}" (${sizeToUse}) agregada a tu bolsa`, {
       icon: '🛍️',
       duration: 3500,
     })
@@ -259,12 +259,12 @@ const ImageZoomModal = ({
   // Customer: Direct WhatsApp checkout
   const handleDirectWhatsApp = () => {
     if (!product) return
-    const sizeToUse = selectedSize || (product.sizes?.length === 1 ? product.sizes[0] : null)
-    if (!sizeToUse && product.sizes?.length > 0) {
+    const sizeToUse = selectedSize || (product.sizes?.length === 1 ? product.sizes[0] : (product.sizes?.length ? null : 'Única'))
+    if (!sizeToUse) {
       toast.error('Selecciona una talla primero', { icon: '📏' })
       return
     }
-    const singleItem = [{ product, size: sizeToUse || 'Única', quantity: 1 }]
+    const singleItem = [{ product, size: sizeToUse, quantity: 1 }]
     openWhatsAppCheckout(singleItem, settings)
   }
 

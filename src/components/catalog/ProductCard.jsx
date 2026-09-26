@@ -93,17 +93,18 @@ const ProductCard = ({ product }) => {
   const savings = hasPromo ? product.original_price - product.price : 0
 
   const handleAddToCart = () => {
-    if (!selectedSize) {
+    const sizeToUse = selectedSize || (product?.sizes?.length === 1 ? product.sizes[0] : (product?.sizes?.length ? null : 'Única'))
+    if (!sizeToUse) {
       setHighlightSize(true)
       setTimeout(() => setHighlightSize(false), 800)
-      toast.error('Elige una talla o medida para continuar', {
+      toast.error('Elige una talla para continuar', {
         id: `size-required-${product.id}`,
         icon: '📏',
       })
       return
     }
 
-    addItem(product, selectedSize, false)
+    addItem(product, sizeToUse, true)
     setJustAdded(true)
     setTimeout(() => setJustAdded(false), 2200)
 
@@ -111,20 +112,20 @@ const ProductCard = ({ product }) => {
       (t) => (
         <div className='flex items-center justify-between gap-3 text-sm'>
           <span>
-            <b>{product.name}</b> ({selectedSize}) agregado
+            <b>{product.name}</b> ({sizeToUse}) agregado a tu bolsa
           </span>
           <button
             onClick={() => {
               toast.dismiss(t.id)
               setIsOpen(true)
             }}
-            className='underline text-brand-300 font-bold hover:text-white shrink-0 ml-2'
+            className='underline text-brand-300 font-bold hover:text-white shrink-0 ml-2 cursor-pointer'
           >
             Ver bolsa 🛍️
           </button>
         </div>
       ),
-      { icon: '🛍️', duration: 4000 }
+      { icon: '🛍️', duration: 3500 }
     )
   }
 
