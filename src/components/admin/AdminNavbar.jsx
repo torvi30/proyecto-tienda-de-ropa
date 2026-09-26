@@ -7,7 +7,7 @@ import {
 const TABS = [
   { id: 'metrics',    label: 'Métricas',      shortLabel: 'Métricas',   icon: TrendingUp },
   { id: 'products',   label: 'Inventario',    shortLabel: 'Inventario', icon: Package },
-  { id: 'upload',     label: 'Subir Fotos',   shortLabel: 'Subir',      icon: Upload },
+  { id: 'upload',     label: 'Subir Prenda',  shortLabel: 'Subir',      icon: Upload },
   { id: 'categories', label: 'Categorías',    shortLabel: 'Categorías', icon: Layers },
   { id: 'settings',   label: 'Ajustes',       shortLabel: 'Ajustes',    icon: Settings },
 ]

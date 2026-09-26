@@ -3,7 +3,7 @@ import { Navigate } from 'react-router-dom'
 import useAuth from '../hooks/useAuth'
 import useProducts from '../hooks/useProducts'
 import AdminNavbar from '../components/admin/AdminNavbar'
-import BatchUpload from '../components/admin/BatchUpload'
+import SingleProductUpload from '../components/admin/SingleProductUpload'
 import ProductList from '../components/admin/ProductList'
 import CategoryManager from '../components/admin/CategoryManager'
 import StoreSettingsManager from '../components/admin/StoreSettingsManager'
@@ -50,13 +50,16 @@ const AdminPage = () => {
 
         {activeTab === 'upload' && (
           <div>
-            <div className='mb-6'>
-              <h2 className='text-gray-100 font-display text-2xl font-bold'>Subir productos</h2>
-              <p className='text-gray-500 text-sm mt-1'>
-                Arrastra hasta 20 fotos · Se comprimen automáticamente a WebP antes de subirse
+            <div className='mb-6 max-w-xl mx-auto'>
+              <h2 className='text-gray-100 font-display text-2xl font-bold'>Subir Prenda</h2>
+              <p className='text-gray-400 text-sm mt-1'>
+                Elige la foto, define nombre, precio y tallas, y publícala de inmediato en la tienda
               </p>
             </div>
-            <BatchUpload onSuccess={handleUploadSuccess} />
+            <SingleProductUpload
+              onSuccess={() => setRefreshKey((k) => k + 1)}
+              onNavigateInventory={() => setActiveTab('products')}
+            />
           </div>
         )}
 
