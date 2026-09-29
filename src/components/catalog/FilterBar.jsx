@@ -1,4 +1,4 @@
-import { SlidersHorizontal, X, Flame, Star, Sparkles } from 'lucide-react'
+import { SlidersHorizontal, X, Flame, Star, Sparkles, ArrowUpDown, Ruler } from 'lucide-react'
 
 // Global standard sizing list
 const ALL_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'Única']
@@ -10,17 +10,20 @@ const FilterBar = ({
   onlySales,
   onlyFeatured,
   onlyNew,
+  sortBy = 'recommended',
   onCategoryChange,
   onSizeChange,
   onToggleSales,
   onToggleFeatured,
   onToggleNew,
+  onSortChange,
+  onOpenSizeGuide,
   saleCount = 0,
   featuredCount = 0,
   newCount = 0,
   totalVisible,
 }) => {
-  const hasActiveFilter = selectedCategory || selectedSize || onlySales || onlyFeatured || onlyNew
+  const hasActiveFilter = selectedCategory || selectedSize || onlySales || onlyFeatured || onlyNew || sortBy !== 'recommended'
 
   const clearAll = () => {
     onCategoryChange(null)
@@ -28,6 +31,7 @@ const FilterBar = ({
     if (onToggleSales && onlySales) onToggleSales()
     if (onToggleFeatured && onlyFeatured) onToggleFeatured()
     if (onToggleNew && onlyNew) onToggleNew()
+    if (onSortChange) onSortChange('recommended')
   }
 
   return (
@@ -147,8 +151,39 @@ const FilterBar = ({
             ))}
           </div>
 
-          {/* Reset filters + visible counter */}
-          <div className='flex items-center gap-2.5 shrink-0 pl-2'>
+          {/* Sorting & Size Guide Tools */}
+          <div className='flex items-center gap-2 shrink-0 pl-1'>
+            {/* Sorting Dropdown */}
+            <div className='relative inline-flex items-center'>
+              <ArrowUpDown size={12} className='text-brand-400 absolute left-2.5 pointer-events-none' />
+              <select
+                id='sort-by-select'
+                value={sortBy}
+                onChange={(e) => onSortChange && onSortChange(e.target.value)}
+                className='bg-gray-900 border border-gray-800 text-gray-200 text-xs font-semibold rounded-full pl-6 pr-2.5 py-1 outline-none hover:border-gray-700 focus:border-brand-500 cursor-pointer'
+                title='Ordenar prendas'
+              >
+                <option value='recommended'>⭐ Destacados</option>
+                <option value='newest'>✨ Novedades</option>
+                <option value='price_asc'>💰 Menor Precio</option>
+                <option value='price_desc'>💎 Mayor Precio</option>
+                <option value='discount'>🔥 Con Descuento</option>
+              </select>
+            </div>
+
+            {/* Size Guide Trigger Button */}
+            {onOpenSizeGuide && (
+              <button
+                type='button'
+                onClick={onOpenSizeGuide}
+                className='hidden sm:flex items-center gap-1 px-2.5 py-1 rounded-full bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-400 hover:text-brand-300 text-xs font-medium transition-colors cursor-pointer'
+                title='Ver guía de medidas y tallas en cm'
+              >
+                <Ruler size={12} className='text-brand-400' />
+                <span>Tallas</span>
+              </button>
+            )}
+
             {hasActiveFilter && (
               <button
                 id='filter-clear-all'
@@ -159,7 +194,7 @@ const FilterBar = ({
                 <span className='hidden xs:inline'>Quitar</span>
               </button>
             )}
-            <span className='text-gray-500 text-xs font-medium whitespace-nowrap'>
+            <span className='text-gray-500 text-xs font-medium whitespace-nowrap hidden xs:inline'>
               <span className='text-gray-300 font-bold'>{totalVisible}</span> prendas
             </span>
           </div>

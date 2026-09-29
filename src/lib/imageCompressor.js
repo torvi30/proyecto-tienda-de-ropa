@@ -47,6 +47,8 @@ export const compressImage = (file, options = {}) => {
         canvas.height = cfg.targetHeight
 
         const ctx = canvas.getContext('2d')
+        ctx.imageSmoothingEnabled = true
+        ctx.imageSmoothingQuality = 'high'
 
         // --- Cover-fit: center and crop to fill 4:5 ratio ---
         const srcRatio    = img.width / img.height

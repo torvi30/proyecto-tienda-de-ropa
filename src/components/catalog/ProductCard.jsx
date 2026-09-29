@@ -1,16 +1,17 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, memo } from 'react'
 import {
   ShoppingBag, Check, Flame, Star, ZoomIn, Sparkles,
-  MessageCircle, Share2, ChevronLeft, ChevronRight, Images
+  MessageCircle, Share2, ChevronLeft, ChevronRight, Images, Ruler
 } from 'lucide-react'
 import StockBadge from '../shared/StockBadge'
 import ImageZoomModal from '../shared/ImageZoomModal'
+import SizeGuideModal from '../shared/SizeGuideModal'
 import { useCart } from '../../store/CartContext'
 import { useStore } from '../../store/StoreContext'
 import { openWhatsAppCheckout } from '../../lib/whatsapp'
 import toast from 'react-hot-toast'
 
-const ProductCard = ({ product }) => {
+const ProductCard = ({ product, priority = false }) => {
   const { addItem, setIsOpen } = useCart()
   const { settings } = useStore()
   const [selectedSize, setSelectedSize] = useState(
@@ -22,6 +23,8 @@ const ProductCard = ({ product }) => {
   const [justAdded, setJustAdded] = useState(false)
   const [activeImageIndex, setActiveImageIndex] = useState(0)
   const [touchStartX, setTouchStartX] = useState(null)
+  const [showFullDesc, setShowFullDesc] = useState(false)
+  const [showSizeGuide, setShowSizeGuide] = useState(false)
 
   const currencySymbol = settings?.currency_symbol || '$'
 
@@ -209,7 +212,9 @@ const ProductCard = ({ product }) => {
             src={currentImageUrl}
             alt={product.name}
             className='w-full h-full object-cover transition-transform duration-500 ease-out group-hover/img:scale-105 select-none pointer-events-none'
-            loading='lazy'
+            loading={priority ? 'eager' : 'lazy'}
+            decoding='async'
+            fetchPriority={priority ? 'high' : 'auto'}
             draggable={false}
             onError={() => setImgError(true)}
           />
@@ -364,6 +369,31 @@ const ProductCard = ({ product }) => {
               <span>¡Alta demanda! Quedan pocas unidades</span>
             </div>
           )}
+
+          {/* Organized Product Description */}
+          {product.description && (
+            <div className='mt-2 pt-2 border-t border-gray-800/60 text-xs text-gray-300 leading-relaxed'>
+              <p
+                className={`${showFullDesc ? 'whitespace-pre-line text-gray-200' : 'line-clamp-2 text-gray-300/90'} transition-all`}
+                onClick={() => setShowZoom(true)}
+                title='Toca para ver prenda y descripción completa'
+              >
+                {product.description}
+              </p>
+              {product.description.length > 70 && (
+                <button
+                  type='button'
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setShowFullDesc(!showFullDesc)
+                  }}
+                  className='mt-1 text-[11px] font-semibold text-brand-400 hover:text-brand-300 transition-colors inline-flex items-center gap-1 cursor-pointer select-none'
+                >
+                  <span>{showFullDesc ? 'Ver menos' : 'Leer más detalles...'}</span>
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Size / Measurement interactive chips */}
@@ -373,6 +403,18 @@ const ProductCard = ({ product }) => {
               <span className='text-gray-500 text-[11px] uppercase tracking-wider font-semibold'>
                 {selectedSize ? `Selección: ${selectedSize}` : 'Elige talla o medida'}
               </span>
+              <button
+                type='button'
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setShowSizeGuide(true)
+                }}
+                className='text-[10px] text-brand-400 hover:text-brand-300 font-semibold flex items-center gap-1 cursor-pointer transition-colors'
+                title='Ver medidas en cm de cada talla'
+              >
+                <Ruler size={11} />
+                <span>Guía</span>
+              </button>
             </div>
             <div className='flex flex-wrap gap-2'>
               {product.sizes.map((size) => {
@@ -457,8 +499,14 @@ const ProductCard = ({ product }) => {
         initialIndex={activeImageIndex}
         isAdmin={false}
       />
+
+      {/* Guía de tallas oficial de la boutique */}
+      <SizeGuideModal
+        isOpen={showSizeGuide}
+        onClose={() => setShowSizeGuide(false)}
+      />
     </article>
   )
 }
 
-export default ProductCard
+export default memo(ProductCard)

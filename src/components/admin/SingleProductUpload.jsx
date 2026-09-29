@@ -46,6 +46,7 @@ const SingleProductUpload = ({ onSuccess, onNavigateInventory }) => {
 
   // Form fields
   const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
   const [price, setPrice] = useState('')
   const [originalPrice, setOriginalPrice] = useState('')
   const [isOnSale, setIsOnSale] = useState(false)
@@ -233,6 +234,7 @@ const SingleProductUpload = ({ onSuccess, onNavigateInventory }) => {
 
       const newProductData = {
         name: trimmedName,
+        description: description.trim() || null,
         price: parsedPrice,
         original_price: validOrigPrice,
         is_on_sale: Boolean(isOnSale && validOrigPrice),
@@ -271,6 +273,7 @@ const SingleProductUpload = ({ onSuccess, onNavigateInventory }) => {
     })
     setImages([])
     setName('')
+    setDescription('')
     setPrice('')
     setOriginalPrice('')
     setIsOnSale(false)
@@ -602,6 +605,62 @@ const SingleProductUpload = ({ onSuccess, onNavigateInventory }) => {
             required
             className='form-input text-base py-3 bg-gray-950/60 font-sans'
           />
+        </div>
+
+        {/* STEP 2.5: DESCRIPTION & DETAILS */}
+        <div>
+          <div className='flex items-center justify-between mb-2'>
+            <label className='text-gray-300 font-bold text-sm uppercase tracking-wider flex items-center gap-2'>
+              <span className='w-6 h-6 rounded-full bg-brand-600/30 text-brand-300 text-xs flex items-center justify-center font-bold'>✨</span>
+              <span>Descripción y Detalles de la Prenda</span>
+            </label>
+            <span className='text-xs text-brand-400 font-medium'>Recomendado para clientes</span>
+          </div>
+
+          <div className='bg-gray-950/50 p-3.5 rounded-2xl border border-gray-800/80 space-y-2.5'>
+            {/* Quick snippet inserters */}
+            <div className='flex items-center flex-wrap gap-1.5'>
+              <span className='text-[11px] text-gray-400 font-medium'>Plantillas rápidas:</span>
+              <button
+                type='button'
+                onClick={() => {
+                  const snippet = '• Tela y Material: '
+                  setDescription((prev) => (prev ? `${prev}\n${snippet}` : snippet))
+                }}
+                className='px-2.5 py-1 rounded-lg bg-gray-900 hover:bg-gray-800 border border-gray-700 text-[11px] text-brand-300 transition-colors cursor-pointer'
+              >
+                + Tela
+              </button>
+              <button
+                type='button'
+                onClick={() => {
+                  const snippet = '• Horma y Ajuste: '
+                  setDescription((prev) => (prev ? `${prev}\n${snippet}` : snippet))
+                }}
+                className='px-2.5 py-1 rounded-lg bg-gray-900 hover:bg-gray-800 border border-gray-700 text-[11px] text-brand-300 transition-colors cursor-pointer'
+              >
+                + Horma
+              </button>
+              <button
+                type='button'
+                onClick={() => {
+                  const snippet = '• Cuidados: Lavar con agua fría y secar a la sombra.'
+                  setDescription((prev) => (prev ? `${prev}\n${snippet}` : snippet))
+                }}
+                className='px-2.5 py-1 rounded-lg bg-gray-900 hover:bg-gray-800 border border-gray-700 text-[11px] text-brand-300 transition-colors cursor-pointer'
+              >
+                + Cuidados
+              </button>
+            </div>
+
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={3}
+              placeholder='Ej: Vestido en chalis suave y fresco con caída fluida. Escote en V, tirantes graduables y elástico en cintura. Ideal para clima cálido.'
+              className='form-input text-sm py-2.5 bg-gray-900 font-sans resize-none w-full'
+            />
+          </div>
         </div>
 
         {/* STEP 3: PRICE & DISCOUNT */}

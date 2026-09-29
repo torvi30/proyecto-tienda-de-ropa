@@ -24,6 +24,7 @@ export const mockProducts = [
   {
     id: 'prod-1',
     name: 'Vestido Floral Primavera',
+    description: 'Vestido midi con estampado floral exclusivo, escote en V y falda con vuelo fluido. Confeccionado en tela chalis suave y fresca, perfecto para eventos de día o clima cálido.',
     category_id: 'cat-1',
     price: 89900,
     sizes: ['S', 'M', 'L'],
@@ -35,6 +36,7 @@ export const mockProducts = [
   {
     id: 'prod-2',
     name: 'Top Satinado Rosa',
+    description: 'Top confeccionado en satén premium brillante con tirantes finos graduables y escote drapeado. Caída impecable y tacto ultra sedoso para un look elegante de noche.',
     category_id: 'cat-2',
     price: 45000,
     sizes: ['S', 'M'],
@@ -46,6 +48,7 @@ export const mockProducts = [
   {
     id: 'prod-3',
     name: 'Conjunto Lino Beige',
+    description: 'Conjunto de dos piezas en mezcla de lino natural transpirable. Incluye top crop cuello halter y pantalón palazzo tiro alto con pretina elástica y bolsillos funcionales.',
     category_id: 'cat-4',
     price: 129000,
     sizes: ['S', 'M', 'L', 'XL'],
@@ -57,6 +60,7 @@ export const mockProducts = [
   {
     id: 'prod-4',
     name: 'Pantalon Wide Leg Negro',
+    description: 'Pantalón bota ancha tiro alto en drill strech de alta densidad. Moldea cintura y caderas con pretina ancha reforzada y cierre invisible. Básico infaltable.',
     category_id: 'cat-3',
     price: 75000,
     sizes: ['M', 'L'],
@@ -68,6 +72,7 @@ export const mockProducts = [
   {
     id: 'prod-5',
     name: 'Vestido Mini Morado',
+    description: 'Vestido corto con diseño drapeado lateral y detalle fruncido ajustable. Confeccionado en scuba crepe elastizado que estiliza la figura con total comodidad.',
     category_id: 'cat-1',
     price: 99000,
     sizes: ['S', 'M'],
@@ -79,6 +84,7 @@ export const mockProducts = [
   {
     id: 'prod-6',
     name: 'Blusa Transparente Lunares',
+    description: 'Blusa en gasa semitransparente con textura de lunares al tono, cuello redondo y mangas abullonadas con puño elástico. Ideal para capas o prendas básicas.',
     category_id: 'cat-2',
     price: 52000,
     sizes: ['S', 'M', 'L'],
@@ -88,3 +94,4 @@ export const mockProducts = [
     is_visible: true,
   },
 ]
+

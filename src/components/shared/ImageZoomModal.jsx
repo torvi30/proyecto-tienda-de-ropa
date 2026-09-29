@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import {
   X, ZoomIn, ZoomOut, RotateCcw, ChevronLeft, ChevronRight,
-  Sparkles, ShoppingBag, MessageCircle, Check, Move
+  Sparkles, ShoppingBag, MessageCircle, Check, Move, FileText
 } from 'lucide-react'
 import { useCart } from '../../store/CartContext'
 import { useStore } from '../../store/StoreContext'
@@ -25,6 +25,7 @@ const ImageZoomModal = ({
   const [selectedSize, setSelectedSize] = useState(null)
   const [justAdded, setJustAdded] = useState(false)
   const [isApplying, setIsApplying] = useState(false)
+  const [showDetails, setShowDetails] = useState(false)
 
   // Mobile pinch-to-zoom tracking
   const touchStartDistRef = useRef(0)
@@ -45,6 +46,7 @@ const ImageZoomModal = ({
       setPosition({ x: 0, y: 0 })
       setSelectedSize(null)
       setJustAdded(false)
+      setShowDetails(false)
       document.body.style.overflow = 'hidden'
     } else {
       document.body.style.overflow = ''
@@ -195,6 +197,8 @@ const ImageZoomModal = ({
       canvas.width = 1080
       canvas.height = 1350
       const ctx = canvas.getContext('2d')
+      ctx.imageSmoothingEnabled = true
+      ctx.imageSmoothingQuality = 'high'
 
       const frameEl = frameRef.current
       const frameRect = frameEl ? frameEl.getBoundingClientRect() : { width: 360, height: 450 }
@@ -292,9 +296,29 @@ const ImageZoomModal = ({
           )}
 
           {currentName && (
-            <span className='text-xs font-medium text-gray-300 truncate hidden md:inline'>
+            <span
+              className='text-xs font-medium text-gray-200 truncate max-w-[110px] xs:max-w-[170px] sm:max-w-xs'
+              title={currentName}
+            >
               · {currentName}
             </span>
+          )}
+
+          {!isAdmin && product && (
+            <button
+              type='button'
+              onClick={() => setShowDetails((prev) => !prev)}
+              className={`px-2.5 py-1 rounded-full text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer shrink-0 ${
+                showDetails
+                  ? 'bg-brand-600 text-white shadow-md shadow-brand-500/30'
+                  : 'bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white border border-gray-700/80'
+              }`}
+              title='Ver descripción y detalles de la prenda'
+            >
+              <FileText size={12} className={showDetails ? 'text-white' : 'text-brand-400'} />
+              <span className='hidden xs:inline'>{showDetails ? 'Ocultar detalles' : 'Ver descripción'}</span>
+              <span className='xs:hidden'>Detalles</span>
+            </button>
           )}
         </div>
 
@@ -405,6 +429,82 @@ const ImageZoomModal = ({
             <span>Mover foto</span>
           </div>
         </div>
+
+        {/* Expandable / Floating Product Details & Description Sheet */}
+        {!isAdmin && product && showDetails && (
+          <div
+            className='absolute bottom-3 inset-x-3 sm:inset-x-auto sm:right-6 sm:bottom-6 z-30 max-w-sm sm:max-w-md bg-gray-950/95 backdrop-blur-2xl border border-brand-500/40 rounded-2xl p-4 shadow-2xl shadow-black/90 animate-fade-in flex flex-col gap-3 max-h-[50vh] sm:max-h-[65vh] overflow-y-auto'
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className='flex items-start justify-between gap-3 border-b border-gray-800 pb-2.5'>
+              <div>
+                <h4 className='font-display text-sm sm:text-base font-bold text-gray-100 leading-snug'>
+                  {product.name}
+                </h4>
+                <div className='flex items-center gap-2 mt-1'>
+                  <span className='text-brand-400 font-bold text-sm'>
+                    {formatPrice(product.price, sym)}
+                  </span>
+                  {product.is_on_sale && product.original_price > product.price && (
+                    <span className='text-gray-500 text-xs line-through'>
+                      {formatPrice(product.original_price, sym)}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <button
+                type='button'
+                onClick={() => setShowDetails(false)}
+                className='text-gray-400 hover:text-white p-1 rounded-lg hover:bg-gray-800/80 transition-colors'
+                title='Cerrar detalles'
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Description Body */}
+            <div>
+              <p className='text-[11px] uppercase tracking-wider text-brand-400 font-semibold mb-1.5 flex items-center gap-1'>
+                <Sparkles size={12} />
+                <span>Descripción & Detalles:</span>
+              </p>
+              {product.description ? (
+                <div className='text-xs sm:text-sm text-gray-200 leading-relaxed font-sans whitespace-pre-line bg-gray-900/80 p-3 rounded-xl border border-gray-800/80'>
+                  {product.description}
+                </div>
+              ) : (
+                <p className='text-xs text-gray-400 italic bg-gray-900/50 p-2.5 rounded-xl'>
+                  Prenda exclusiva de boutique. Contáctanos por WhatsApp para consultas específicas de medidas o material.
+                </p>
+              )}
+            </div>
+
+            {/* Sizes picker inside modal */}
+            {product.sizes && product.sizes.length > 0 && (
+              <div>
+                <p className='text-[10px] text-gray-400 uppercase tracking-wider font-semibold mb-1.5'>
+                  {selectedSize ? `Talla elegida: ${selectedSize}` : 'Selecciona tu talla:'}
+                </p>
+                <div className='flex flex-wrap gap-1.5'>
+                  {product.sizes.map((s) => (
+                    <button
+                      key={s}
+                      type='button'
+                      onClick={() => setSelectedSize(selectedSize === s ? null : s)}
+                      className={`px-3 py-1 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
+                        selectedSize === s
+                          ? 'bg-brand-600 text-white border-brand-400 shadow-md shadow-brand-500/30 ring-2 ring-brand-400/40'
+                          : 'bg-gray-900 text-gray-300 border-gray-700 hover:border-gray-500'
+                      }`}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </main>
 
       {/* 3. Bottom Interactive Framing & Zoom Controls */}
@@ -476,6 +576,19 @@ const ImageZoomModal = ({
                   {formatPrice(product.price, sym)}
                 </span>
               )}
+
+              <button
+                type='button'
+                onClick={() => setShowDetails((prev) => !prev)}
+                className={`p-2 rounded-xl border text-xs font-semibold flex items-center gap-1 transition-all active:scale-95 cursor-pointer sm:hidden ${
+                  showDetails
+                    ? 'bg-brand-600 text-white border-brand-400'
+                    : 'bg-gray-900 hover:bg-gray-800 border-gray-700 text-gray-300'
+                }`}
+                title='Ver descripción y detalles'
+              >
+                <FileText size={16} />
+              </button>
 
               {justAdded ? (
                 <button

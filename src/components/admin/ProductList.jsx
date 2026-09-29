@@ -258,13 +258,27 @@ const ProductList = ({ refreshKey }) => {
               {/* Main information */}
               <div className='flex-1 min-w-0'>
                 <div className='flex items-center gap-2'>
-                  <p className='text-gray-100 font-semibold text-sm sm:text-base leading-snug truncate group-hover/item:text-brand-300 transition-colors'>
+                  <p
+                    className='text-gray-100 font-semibold text-sm sm:text-base leading-snug truncate group-hover/item:text-brand-300 transition-colors'
+                    title={product.name}
+                  >
                     {product.name}
                   </p>
                   <span className='text-[10px] text-brand-400 bg-brand-500/10 px-1.5 py-0.5 rounded-md border border-brand-500/25 shrink-0 font-medium'>
                     Tocar para editar
                   </span>
                 </div>
+
+                {/* Description indicator/preview */}
+                {product.description ? (
+                  <p className='text-xs text-gray-400 line-clamp-1 mt-0.5' title={product.description}>
+                    <span className='text-brand-400/80 font-medium'>Detalles:</span> {product.description}
+                  </p>
+                ) : (
+                  <p className='text-[11px] text-gray-500/70 italic mt-0.5'>
+                    Sin descripción (Toca para agregar)
+                  </p>
+                )}
 
               {/* Price editing: inline form or standard display */}
               {inlineEditId === product.id ? (

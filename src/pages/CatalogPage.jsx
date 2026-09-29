@@ -8,6 +8,8 @@ import FilterBar from '../components/catalog/FilterBar'
 import ProductGrid from '../components/catalog/ProductGrid'
 import ProductCard from '../components/catalog/ProductCard'
 import CartDrawer from '../components/catalog/CartDrawer'
+import SizeGuideModal from '../components/shared/SizeGuideModal'
+import FloatingWhatsAppButton from '../components/shared/FloatingWhatsAppButton'
 import { useCart } from '../store/CartContext'
 
 const CatalogPage = () => {
@@ -22,6 +24,8 @@ const CatalogPage = () => {
   const [onlyFeatured, setOnlyFeatured] = useState(false)
   const [onlyNew, setOnlyNew] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [sortBy, setSortBy] = useState('recommended')
+  const [showSizeGuide, setShowSizeGuide] = useState(false)
 
   // Función para determinar si una prenda es recién llegada (últimos 7 días)
   const isProductNew = (p) => {
@@ -64,16 +68,45 @@ const CatalogPage = () => {
       const matchesSale = !onlySales || (p.is_on_sale && p.original_price > p.price)
       const matchesFeatured = !onlyFeatured || p.is_featured
       const matchesNew = !onlyNew || isProductNew(p)
-      const matchesSearch = !query || (p.name && p.name.toLowerCase().includes(query))
+      const matchesSearch =
+        !query ||
+        (p.name && p.name.toLowerCase().includes(query)) ||
+        (p.description && p.description.toLowerCase().includes(query))
       return matchesCategory && matchesSize && matchesSale && matchesFeatured && matchesNew && matchesSearch
     })
 
     return list.sort((a, b) => {
+      if (sortBy === 'price_asc') {
+        return (Number(a.price) || 0) - (Number(b.price) || 0)
+      }
+      if (sortBy === 'price_desc') {
+        return (Number(b.price) || 0) - (Number(a.price) || 0)
+      }
+      if (sortBy === 'discount') {
+        const discA = a.is_on_sale && a.original_price > a.price ? (a.original_price - a.price) / a.original_price : 0
+        const discB = b.is_on_sale && b.original_price > b.price ? (b.original_price - b.price) / b.original_price : 0
+        return discB - discA
+      }
+      if (sortBy === 'newest') {
+        const timeA = a.created_at?.toDate
+          ? a.created_at.toDate().getTime()
+          : a.created_at?.seconds
+          ? a.created_at.seconds * 1000
+          : new Date(a.created_at || 0).getTime()
+        const timeB = b.created_at?.toDate
+          ? b.created_at.toDate().getTime()
+          : b.created_at?.seconds
+          ? b.created_at.seconds * 1000
+          : new Date(b.created_at || 0).getTime()
+        return timeB - timeA
+      }
+
+      // Default 'recommended' (Destacados + Nuevos + Ofertas)
       const scoreA = (a.is_featured ? 3 : 0) + (isProductNew(a) ? 2 : 0) + (a.is_on_sale && a.original_price > a.price ? 1 : 0)
       const scoreB = (b.is_featured ? 3 : 0) + (isProductNew(b) ? 2 : 0) + (b.is_on_sale && b.original_price > b.price ? 1 : 0)
-      return scoreB - scoreA // Higher score sorts to the top
+      return scoreB - scoreA
     })
-  }, [products, selectedCategory, selectedSize, onlySales, onlyFeatured, onlyNew, searchQuery])
+  }, [products, selectedCategory, selectedSize, onlySales, onlyFeatured, onlyNew, searchQuery, sortBy])
 
   const storeName = settings?.store_name || 'Boutique'
 
@@ -84,6 +117,7 @@ const CatalogPage = () => {
     setOnlyFeatured(false)
     setOnlyNew(false)
     setSearchQuery('')
+    setSortBy('recommended')
   }
 
   return (
@@ -130,11 +164,14 @@ const CatalogPage = () => {
         onlySales={onlySales}
         onlyFeatured={onlyFeatured}
         onlyNew={onlyNew}
+        sortBy={sortBy}
         onCategoryChange={setSelectedCategory}
         onSizeChange={setSelectedSize}
         onToggleSales={() => setOnlySales((prev) => !prev)}
         onToggleFeatured={() => setOnlyFeatured((prev) => !prev)}
         onToggleNew={() => setOnlyNew((prev) => !prev)}
+        onSortChange={setSortBy}
+        onOpenSizeGuide={() => setShowSizeGuide(true)}
         saleCount={saleProducts.length}
         featuredCount={featuredProducts.length}
         newCount={newProducts.length}
@@ -236,6 +273,15 @@ const CatalogPage = () => {
 
       {/* Slide-out cart drawer */}
       <CartDrawer />
+
+      {/* Interactive boutique size guide modal */}
+      <SizeGuideModal
+        isOpen={showSizeGuide}
+        onClose={() => setShowSizeGuide(false)}
+      />
+
+      {/* VIP Floating WhatsApp Advisor Button */}
+      <FloatingWhatsAppButton />
     </div>
   )
 }

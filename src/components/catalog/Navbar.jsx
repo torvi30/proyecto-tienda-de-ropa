@@ -1,11 +1,17 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import {
   ShoppingBag, Search, X, Flame, Star,
-  HelpCircle, Lock, Sparkles
+  HelpCircle, Lock, Sparkles, Truck, MessageCircle
 } from 'lucide-react'
 import { useCart } from '../../store/CartContext'
 import HowToBuyModal from './HowToBuyModal'
+
+const ANNOUNCEMENTS = [
+  { icon: Sparkles, tag: 'Nueva Colección', text: 'Prendas exclusivas de boutique cada semana' },
+  { icon: Truck, tag: 'Envíos Seguros', text: 'Entregas a todo el país y asesoría de talla en vivo' },
+  { icon: MessageCircle, tag: 'Compra Fácil', text: 'Pide directo a nuestro WhatsApp sin registros ni demoras' },
+]
 
 const Navbar = ({
   storeName = 'Boutique',
@@ -25,27 +31,40 @@ const Navbar = ({
   const { totalItems, setIsOpen } = useCart()
   const [showHowToBuy, setShowHowToBuy] = useState(false)
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
+  const [activeAnnounce, setActiveAnnounce] = useState(0)
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setActiveAnnounce((prev) => (prev + 1) % ANNOUNCEMENTS.length)
+    }, 4000)
+    return () => clearInterval(timer)
+  }, [])
+
+  const currentAnnounce = ANNOUNCEMENTS[activeAnnounce]
+  const IconComponent = currentAnnounce.icon
 
   return (
     <>
-      {/* 1. Top Luxury Announcement Bar */}
+      {/* 1. Top Luxury Dynamic Announcement Bar */}
       <div className='bg-gradient-to-r from-brand-950 via-gray-900 to-pink-950 border-b border-gray-800/80 text-gray-300 py-1.5 px-4 text-xs select-none'>
         <div className='page-container flex items-center justify-between'>
           <div className='flex items-center gap-2 mx-auto sm:mx-0 overflow-hidden text-center'>
-            <span className='inline-flex items-center gap-1.5 font-semibold text-brand-300 tracking-wide uppercase text-[11px]'>
-              <Sparkles size={13} className='text-brand-400 shrink-0 animate-pulse' />
-              <span>Nueva Colección</span>
-            </span>
-            <span className='text-gray-600 hidden sm:inline'>•</span>
-            <span className='text-gray-400 hidden sm:inline text-xs'>
-              Envíos nacionales seguros · Atención personalizada y directa vía WhatsApp
-            </span>
+            <div key={activeAnnounce} className='flex items-center gap-2 animate-fade-in'>
+              <span className='inline-flex items-center gap-1.5 font-semibold text-brand-300 tracking-wide uppercase text-[11px] bg-brand-500/15 border border-brand-500/30 px-2 py-0.5 rounded-full'>
+                <IconComponent size={12} className='text-brand-400 shrink-0' />
+                <span>{currentAnnounce.tag}</span>
+              </span>
+              <span className='text-gray-600 hidden sm:inline'>•</span>
+              <span className='text-gray-300 text-xs font-medium'>
+                {currentAnnounce.text}
+              </span>
+            </div>
           </div>
 
           {/* Direct link to How to Buy modal in top ticker */}
           <button
             onClick={() => setShowHowToBuy(true)}
-            className='hidden md:flex items-center gap-1 text-gray-400 hover:text-brand-300 text-xs transition-colors'
+            className='hidden md:flex items-center gap-1 text-gray-400 hover:text-brand-300 text-xs transition-colors cursor-pointer'
           >
             <HelpCircle size={13} />
             <span>¿Cómo comprar?</span>

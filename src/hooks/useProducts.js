@@ -3,15 +3,19 @@ import { db } from '../lib/firebaseClient'
 import { collection, getDocs, query, orderBy } from 'firebase/firestore'
 import { mockProducts } from '../lib/mockData'
 
+let cachedProducts = null
+
 const useProducts = () => {
-  const [products, setProducts] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [products, setProducts] = useState(() => cachedProducts || [])
+  const [loading, setLoading] = useState(() => !cachedProducts)
   const [error, setError] = useState(null)
 
   useEffect(() => {
     const fetchProducts = async () => {
       if (!db) {
-        setProducts(mockProducts.filter((p) => p.is_visible && p.stock_status !== 'sold_out'))
+        const fallback = mockProducts.filter((p) => p.is_visible && p.stock_status !== 'sold_out')
+        cachedProducts = fallback
+        setProducts(fallback)
         setLoading(false)
         return
       }
@@ -39,15 +43,19 @@ const useProducts = () => {
         }
 
         // If database does not have products yet, load fallback sample products
-        if (items.length === 0) {
-          setProducts(mockProducts.filter((p) => p.is_visible && p.stock_status !== 'sold_out'))
-        } else {
-          setProducts(items)
-        }
+        const finalItems =
+          items.length === 0
+            ? mockProducts.filter((p) => p.is_visible && p.stock_status !== 'sold_out')
+            : items
+
+        cachedProducts = finalItems
+        setProducts(finalItems)
       } catch (err) {
         console.error('Error loading Firestore products:', err)
         setError(err.message)
-        setProducts(mockProducts.filter((p) => p.is_visible && p.stock_status !== 'sold_out'))
+        const fallback = mockProducts.filter((p) => p.is_visible && p.stock_status !== 'sold_out')
+        cachedProducts = fallback
+        setProducts(fallback)
       } finally {
         setLoading(false)
       }

@@ -3,12 +3,15 @@ import { db } from '../lib/firebaseClient'
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore'
 import { mockCategories } from '../lib/mockData'
 
+let cachedCategories = null
+
 const useCategories = () => {
-  const [categories, setCategories] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [categories, setCategories] = useState(() => cachedCategories || [])
+  const [loading, setLoading] = useState(() => !cachedCategories)
 
   useEffect(() => {
     if (!db) {
+      cachedCategories = mockCategories
       setCategories(mockCategories)
       setLoading(false)
       return
@@ -24,11 +27,9 @@ const useCategories = () => {
             items.push({ id: doc.id, ...doc.data() })
           })
 
-          if (items.length === 0) {
-            setCategories(mockCategories)
-          } else {
-            setCategories(items)
-          }
+          const finalCats = items.length === 0 ? mockCategories : items
+          cachedCategories = finalCats
+          setCategories(finalCats)
           setLoading(false)
         },
         (err) => {

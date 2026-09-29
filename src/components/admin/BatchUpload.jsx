@@ -37,6 +37,7 @@ const makeItem = (file, blob, previewUrl, compressedSizeKB, originalSizeKB) => {
     compressedSizeKB,
     originalSizeKB,
     name: initialName,
+    description: '',
     price: '',
     categoryId: '',
     sizes: [],
@@ -269,6 +270,7 @@ const BatchUpload = ({ onSuccess }) => {
 
         await addDoc(collection(db, 'products'), {
           name: item.name.trim(),
+          description: item.description ? item.description.trim() : null,
           price: parseFloat(item.price),
           category_id: item.categoryId || null,
           sizes: item.sizes,
@@ -636,6 +638,20 @@ const BatchUpload = ({ onSuccess }) => {
                         onChange={(e) => updateItem(item.id, 'name', e.target.value)}
                         placeholder='Ej: Vestido Estampado Seda'
                         className='form-input text-sm py-2 sm:py-2.5'
+                      />
+                    </div>
+
+                    {/* Garment description / details */}
+                    <div>
+                      <label className='text-gray-400 text-xs font-semibold uppercase tracking-wider block mb-1'>
+                        Descripción / Detalles (Opcional)
+                      </label>
+                      <input
+                        type='text'
+                        value={item.description || ''}
+                        onChange={(e) => updateItem(item.id, 'description', e.target.value)}
+                        placeholder='Ej: Tela fresca, corte fluido, no transparenta...'
+                        className='form-input text-xs py-2'
                       />
                     </div>
 

@@ -38,6 +38,7 @@ const EditProductModal = ({ product, onClose, onSaveSuccess }) => {
   const sym = settings?.currency_symbol || '$'
 
   const [name, setName] = useState(product?.name || '')
+  const [description, setDescription] = useState(product?.description || '')
   const [price, setPrice] = useState(product?.price != null ? String(product.price) : '')
   const [originalPrice, setOriginalPrice] = useState(
     product?.original_price != null ? String(product.original_price) : ''
@@ -196,6 +197,7 @@ const EditProductModal = ({ product, onClose, onSaveSuccess }) => {
 
       const updatedPayload = {
         name: name.trim(),
+        description: description.trim() || null,
         price: parsedPrice,
         original_price: validOrigPrice,
         is_on_sale: Boolean(isOnSale && validOrigPrice && validOrigPrice > parsedPrice),
@@ -486,6 +488,62 @@ const EditProductModal = ({ product, onClose, onSaveSuccess }) => {
               required
               className='form-input text-sm sm:text-base py-2.5 sm:py-3 font-sans bg-gray-950/60'
             />
+          </div>
+
+          {/* SECTION 2.5: DESCRIPTION & DETAILS */}
+          <div>
+            <div className='flex items-center justify-between mb-1.5'>
+              <label className='text-gray-400 text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5'>
+                <Sparkles size={13} className='text-brand-400' />
+                <span>Descripción y Detalles de la Prenda</span>
+              </label>
+              <span className='text-[11px] text-brand-400 font-medium'>Visible para clientes</span>
+            </div>
+
+            <div className='bg-gray-950/50 p-3 rounded-2xl border border-gray-800/80 space-y-2'>
+              {/* Quick snippet inserters */}
+              <div className='flex items-center flex-wrap gap-1.5'>
+                <span className='text-[10px] text-gray-400 font-medium'>Plantillas rápidas:</span>
+                <button
+                  type='button'
+                  onClick={() => {
+                    const snippet = '• Tela y Material: '
+                    setDescription((prev) => (prev ? `${prev}\n${snippet}` : snippet))
+                  }}
+                  className='px-2.5 py-1 rounded-lg bg-gray-900 hover:bg-gray-800 border border-gray-700 text-[10px] text-brand-300 transition-colors cursor-pointer'
+                >
+                  + Tela
+                </button>
+                <button
+                  type='button'
+                  onClick={() => {
+                    const snippet = '• Horma y Ajuste: '
+                    setDescription((prev) => (prev ? `${prev}\n${snippet}` : snippet))
+                  }}
+                  className='px-2.5 py-1 rounded-lg bg-gray-900 hover:bg-gray-800 border border-gray-700 text-[10px] text-brand-300 transition-colors cursor-pointer'
+                >
+                  + Horma
+                </button>
+                <button
+                  type='button'
+                  onClick={() => {
+                    const snippet = '• Cuidados: Lavar con agua fría y secar a la sombra.'
+                    setDescription((prev) => (prev ? `${prev}\n${snippet}` : snippet))
+                  }}
+                  className='px-2.5 py-1 rounded-lg bg-gray-900 hover:bg-gray-800 border border-gray-700 text-[10px] text-brand-300 transition-colors cursor-pointer'
+                >
+                  + Cuidados
+                </button>
+              </div>
+
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={3}
+                placeholder='Detalles de la prenda: tela, corte, cuidados, medidas o sugerencias de combinación...'
+                className='form-input text-xs sm:text-sm py-2 bg-gray-900 font-sans resize-none w-full'
+              />
+            </div>
           </div>
 
           {/* SECTION 3: PRICING & PROMOTION */}
